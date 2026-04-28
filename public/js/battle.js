@@ -147,17 +147,22 @@
     return damage;
   }
 
-  function showFloatingDamage(amount, isCrit, clientX, clientY, isSuperCrit) {
+  function showFloatingDamage(amount, isCrit, isSuperCrit) {
     const enemyArea = window.GameUI.enemyArea();
     const floatingNodes = enemyArea.querySelectorAll(".floating-dmg");
     if (floatingNodes.length >= MAX_FLOATING_DAMAGE_NODES) {
       floatingNodes[0].remove();
     }
-    const rect = enemyArea.getBoundingClientRect();
+    const areaRect = enemyArea.getBoundingClientRect();
+    const enemyRect = window.GameUI.enemyButton().getBoundingClientRect();
+    const damageIndex = floatingNodes.length % 5;
+    const xOffset = (damageIndex - 2) * 14;
+    const damageX = enemyRect.left + enemyRect.width / 2 + xOffset;
+    const damageY = enemyRect.top + Math.max(28, enemyRect.height * 0.18);
     const node = document.createElement("div");
     node.className = "floating-dmg";
-    node.style.left = `${(clientX ?? rect.left + rect.width / 2) - rect.left}px`;
-    node.style.top = `${(clientY ?? rect.top + rect.height / 2) - rect.top}px`;
+    node.style.left = `${damageX - areaRect.left}px`;
+    node.style.top = `${damageY - areaRect.top}px`;
     node.style.color = isSuperCrit ? "#ff8ff3" : isCrit ? "#ffd36a" : "#eef3ff";
     node.textContent = isSuperCrit
       ? `超会心 ${window.GameUI.formatNumber(amount)}`
@@ -244,8 +249,6 @@
     amount,
     isCrit = false,
     source = "tap",
-    clientX = null,
-    clientY = null,
     isSuperCrit = false,
   ) {
     if (!state.enemy) return;
@@ -253,13 +256,13 @@
     state.enemy.hp = Math.max(0, state.enemy.hp - finalAmount);
     state.recentAutoDamage += finalAmount;
     if (source !== "ally") {
-      showFloatingDamage(finalAmount, isCrit, clientX, clientY, isSuperCrit);
+      showFloatingDamage(finalAmount, isCrit, isSuperCrit);
     }
     if (state.enemy.hp <= 0) defeatEnemy();
     window.GameUI.renderBattle();
   }
 
-  function onTapEnemy(event) {
+  function onTapEnemy() {
     const tappedEnemy = state.enemy;
     const tapDamage = calcTapDamage();
     const superCrit = Math.random() < calcSuperCritChance();
@@ -277,8 +280,6 @@
       damage,
       crit || superCrit,
       "tap",
-      event.clientX,
-      event.clientY,
       superCrit,
     );
 

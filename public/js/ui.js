@@ -730,6 +730,13 @@
     const partyAttackBonus = window.GameAllies?.getPartyAttackBonus
       ? window.GameAllies.getPartyAttackBonus()
       : 0;
+    const activeAllies = window.GameAllies?.getActiveAllies
+      ? window.GameAllies.getActiveAllies()
+      : [];
+    const totalAllyAttack = activeAllies.reduce(
+      (total, ally) => total + (window.GameAllies?.getAllyAttack?.(ally) || 0),
+      0,
+    );
 
     const playerLines = [];
     if (tapDamage > 1) {
@@ -768,6 +775,9 @@
     }
 
     const allyLines = [];
+    if (totalAllyAttack > 0) {
+      allyLines.push(`仲間合計攻撃力: ${formatNumber(totalAllyAttack)}`);
+    }
     if (compassAttack > 0) {
       allyLines.push(`コンパス攻撃力: +${formatPercent(compassAttack, 1)}%`);
     }

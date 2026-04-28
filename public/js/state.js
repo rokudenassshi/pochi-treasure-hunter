@@ -24,7 +24,7 @@ window.GameState = {
     lockedItemIds: [],
   },
   settings: {
-    autoChallengeBoss: false,
+    autoChallengeBoss: true,
   },
   records: {
     dungeonClearCount: 0,

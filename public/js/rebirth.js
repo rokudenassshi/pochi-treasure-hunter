@@ -465,7 +465,38 @@
   }
 
   function grantRebirthTreasures(rewardCount) {
-    return grantTreasureRewards(rewardCount, getReachFloor());
+    if (rewardCount <= 0) return [];
+
+    const rewardFloor = getReachFloor();
+    const rewards = new Map();
+    const dagger = getTreasureDefinition("dagger");
+    const canGrantDagger =
+      dagger &&
+      rewardFloor >= (Number(dagger.unlockFloor) || 1) &&
+      !isTreasureAtMax(dagger.id);
+
+    let remainingRewardCount = rewardCount;
+    if (canGrantDagger) {
+      const addedAmount = addTreasure(dagger.id, 1);
+      if (addedAmount > 0) {
+        rewards.set(dagger.id, addedAmount);
+        remainingRewardCount -= 1;
+      }
+    }
+
+    for (const treasure of grantTreasureRewards(remainingRewardCount, rewardFloor)) {
+      rewards.set(
+        treasure.id,
+        (rewards.get(treasure.id) || 0) + treasure.rewardedCount,
+      );
+    }
+
+    return treasureDefinitions
+      .filter((treasure) => rewards.has(treasure.id))
+      .map((treasure) => ({
+        ...treasure,
+        rewardedCount: rewards.get(treasure.id) || 0,
+      }));
   }
 
   function getBossTreasureRewardFloor(bossFloor) {

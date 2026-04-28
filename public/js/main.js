@@ -11,6 +11,22 @@
     }
   }
 
+  function updateMobileLayoutWidth() {
+    const isTouchPhone = window.matchMedia(
+      "(hover: none) and (pointer: coarse) and (max-width: 520px)",
+    ).matches;
+    if (!isTouchPhone) {
+      document.documentElement.style.removeProperty("--app-fixed-width");
+      return;
+    }
+
+    const width = Math.min(
+      window.innerWidth || document.documentElement.clientWidth || 520,
+      520,
+    );
+    document.documentElement.style.setProperty("--app-fixed-width", `${width}px`);
+  }
+
   function dedupeItems(items) {
     const seenIds = new Set();
     return items.filter((item) => {
@@ -273,6 +289,11 @@
   }
 
   function bindEvents() {
+    document.addEventListener(
+      "gesturestart",
+      (event) => event.preventDefault(),
+      { passive: false },
+    );
     ui.enemyArea().addEventListener("click", window.GameBattle.onTapEnemy);
     ui.els.challengeBossBtn.addEventListener(
       "click",
@@ -445,6 +466,7 @@
   }
 
   function init() {
+    updateMobileLayoutWidth();
     const hasSave = loadGame();
     ui.addLog(
       hasSave
@@ -462,6 +484,9 @@
   }
 
   window.addEventListener("beforeunload", saveGame);
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(updateMobileLayoutWidth, 100);
+  });
 
   init();
 })();

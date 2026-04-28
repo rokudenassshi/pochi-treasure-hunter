@@ -286,6 +286,7 @@
       name: "戦士の戦旗",
       description: "仲間の攻撃力 +1",
       allyAttackBonus: 1,
+      unlockFloor: 100,
     },
     {
       id: "coin",
@@ -493,7 +494,8 @@
       id: "treasureHunterCrown",
       rewardRarity: "epic",
       name: "宝狩りの冠",
-      description: "ボス撃破時に秘宝を1個獲得（10Fボスから50F相当、100Fごとに抽選範囲拡大）",
+      description:
+        "ボス撃破時に秘宝を1個獲得（10Fボスから50F相当、100Fごとに抽選範囲拡大）",
       bossTreasureRewardCount: 1,
       bossTreasureRewardFloorOffset: 50,
       unlockFloor: 400,

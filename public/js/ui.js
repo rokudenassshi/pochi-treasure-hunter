@@ -26,6 +26,9 @@
     buyTapBtn: document.getElementById("buyTapBtn"),
     buyCritBtn: document.getElementById("buyCritBtn"),
     buyCritDmgBtn: document.getElementById("buyCritDmgBtn"),
+    maxTapBtn: document.getElementById("maxTapBtn"),
+    maxCritBtn: document.getElementById("maxCritBtn"),
+    maxCritDmgBtn: document.getElementById("maxCritDmgBtn"),
     rebirthBtn: document.getElementById("rebirthBtn"),
     buyTapCost: document.getElementById("buyTapCost"),
     buyCritCost: document.getElementById("buyCritCost"),
@@ -156,6 +159,10 @@
     const extraTreasureChance = window.GameRebirth?.getExtraTreasureChance
       ? window.GameRebirth.getExtraTreasureChance()
       : 0;
+    const nextUnlockTreasureChance =
+      window.GameRebirth?.getNextUnlockTreasureChance
+        ? window.GameRebirth.getNextUnlockTreasureChance()
+        : 0;
     const nextRebirthExtraTreasureCount =
       window.GameRebirth?.getNextRebirthExtraTreasureCount
         ? window.GameRebirth.getNextRebirthExtraTreasureCount()
@@ -179,6 +186,9 @@
     els.buyTapBtn.disabled = state.gold < costs.tap;
     els.buyCritBtn.disabled = state.gold < costs.crit;
     els.buyCritDmgBtn.disabled = state.gold < costs.critDamage;
+    els.maxTapBtn.disabled = state.gold < costs.tap;
+    els.maxCritBtn.disabled = state.gold < costs.crit;
+    els.maxCritDmgBtn.disabled = state.gold < costs.critDamage;
     els.rebirthDescriptionText.textContent =
       `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに秘宝獲得 / 今回 ${formatNumber(rewardCount)}個${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
     els.rebirthBtn.disabled = rewardCount <= 0;
@@ -394,8 +404,23 @@
                 ([rarity, label]) =>
                   `<option value="${rarity}" ${state.itemSettings.autoDiscardRarity === rarity ? "selected" : ""}>${label}</option>`,
                 )
-                .join("")}
+              .join("")}
           </select>
+        </div>
+        <div class="row-card equip-setting-card">
+          <div>
+            <div class="item-name">攻撃力で自動破棄</div>
+            <div class="small">主ステータスがこの値未満なら捨てる（0で無効）</div>
+          </div>
+          <input
+            id="autoDiscardAttackInput"
+            class="btn equip-setting-control equip-setting-number"
+            type="number"
+            min="0"
+            step="0.1"
+            inputmode="decimal"
+            value="${Number(state.itemSettings.autoDiscardAttackPercent) || 0}"
+          >
         </div>
         <div class="row-card equip-setting-card">
           <div class="item-name">一括破棄</div>

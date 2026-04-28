@@ -328,22 +328,47 @@
     };
   }
 
-  function purchaseUpgrade(type) {
+  function getUpgradeCost(type) {
     const costs = getUpgradeCosts();
-    const cost =
-      type === "tap"
-        ? costs.tap
-        : type === "crit"
-          ? costs.crit
-          : costs.critDamage;
-    if (state.gold < cost) return;
+    return type === "tap"
+      ? costs.tap
+      : type === "crit"
+        ? costs.crit
+        : costs.critDamage;
+  }
 
-    state.gold -= cost;
+  function applyUpgrade(type) {
     if (type === "tap") state.player.tapLevel += 1;
     if (type === "crit") state.player.critLevel += 1;
     if (type === "critDamage") state.player.critDamageLevel += 1;
+  }
+
+  function purchaseUpgrade(type) {
+    const cost = getUpgradeCost(type);
+    if (state.gold < cost) return;
+
+    state.gold -= cost;
+    applyUpgrade(type);
 
     window.GameUI.addLog("プレイヤーを強化した。");
+    window.GameUI.render();
+    window.GameSave.save();
+  }
+
+  function purchaseMaxUpgrade(type) {
+    let purchasedCount = 0;
+
+    while (true) {
+      const cost = getUpgradeCost(type);
+      if (state.gold < cost) break;
+      state.gold -= cost;
+      applyUpgrade(type);
+      purchasedCount += 1;
+    }
+
+    if (purchasedCount <= 0) return;
+
+    window.GameUI.addLog(`Max強化: ${purchasedCount}回強化した。`);
     window.GameUI.render();
     window.GameSave.save();
   }
@@ -359,6 +384,7 @@
     getUpgradeCosts,
     getUpgradeDescriptions,
     purchaseUpgrade,
+    purchaseMaxUpgrade,
     damageEnemy,
     onTapEnemy,
   };

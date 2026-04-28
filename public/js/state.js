@@ -21,6 +21,7 @@ window.GameState = {
   nextItemId: 1,
   itemSettings: {
     autoDiscardRarity: "none",
+    autoDiscardAttackPercent: 0,
     lockedItemIds: [],
   },
   settings: {

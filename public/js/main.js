@@ -2,6 +2,7 @@
   const state = window.GameState;
   const ui = window.GameUI;
   const SAVE_KEY = "clicker_hackslash_save";
+  const INTRO_POPUP_KEY = "pochi_treasure_hunter_intro_seen";
 
   function saveGame() {
     try {
@@ -25,6 +26,44 @@
       520,
     );
     document.documentElement.style.setProperty("--app-fixed-width", `${width}px`);
+  }
+
+  function showIntroPopupIfNeeded() {
+    try {
+      if (localStorage.getItem(INTRO_POPUP_KEY) === "1") return;
+    } catch (error) {
+      console.warn("Intro popup state read failed", error);
+    }
+
+    const modal = document.createElement("div");
+    modal.className = "modal intro-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "introModalTitle");
+    modal.innerHTML = `
+      <div class="modal-content intro-modal-content">
+        <h3 id="introModalTitle">ポチポチ秘宝ハンター</h3>
+        <p>あなたはトレジャーハンターとしてダンジョンを踏破しよう！</p>
+        <p>ダンジョンの奥には様々な秘宝が...</p>
+        <div class="modal-actions">
+          <button class="btn primary" type="button" id="introModalCloseBtn">冒険を始める</button>
+        </div>
+      </div>
+    `;
+
+    function closeIntroPopup() {
+      try {
+        localStorage.setItem(INTRO_POPUP_KEY, "1");
+      } catch (error) {
+        console.warn("Intro popup state save failed", error);
+      }
+      modal.remove();
+    }
+
+    document.body.appendChild(modal);
+    const closeButton = document.getElementById("introModalCloseBtn");
+    closeButton?.focus();
+    closeButton?.addEventListener("click", closeIntroPopup);
   }
 
   function dedupeItems(items) {
@@ -123,9 +162,14 @@
       state.partyLevel = Math.max(1, Number(parsed.partyLevel) || 1);
       state.itemSettings = {
         autoDiscardRarity: "none",
+        autoDiscardAttackPercent: 0,
         lockedItemIds: [],
         ...(parsed.itemSettings || {}),
       };
+      state.itemSettings.autoDiscardAttackPercent = Math.max(
+        0,
+        Number(state.itemSettings.autoDiscardAttackPercent) || 0,
+      );
       if (!Array.isArray(state.itemSettings.lockedItemIds)) {
         state.itemSettings.lockedItemIds = [];
       }
@@ -294,7 +338,65 @@
       (event) => event.preventDefault(),
       { passive: false },
     );
-    ui.enemyArea().addEventListener("click", window.GameBattle.onTapEnemy);
+    document.addEventListener(
+      "gesturechange",
+      (event) => event.preventDefault(),
+      { passive: false },
+    );
+    document.addEventListener(
+      "gestureend",
+      (event) => event.preventDefault(),
+      { passive: false },
+    );
+    const enemyArea = ui.enemyArea();
+    const battlePanel = document.querySelector(".battle-panel") || enemyArea;
+    function shouldHandleBattleTap(event) {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return true;
+      const interactiveTarget = target.closest("button, a, input, select, textarea");
+      return !interactiveTarget || interactiveTarget === ui.enemyButton();
+    }
+
+    function attackFromBattleTap(event) {
+      if (!shouldHandleBattleTap(event)) return;
+      event.preventDefault();
+      window.GameBattle.onTapEnemy();
+    }
+
+    const isTouchDevice =
+      "ontouchstart" in window || Number(navigator.maxTouchPoints) > 0;
+    if (isTouchDevice) {
+      battlePanel.addEventListener(
+        "touchstart",
+        (event) => {
+          if (!shouldHandleBattleTap(event)) return;
+          if (event.touches.length > 1) return;
+          attackFromBattleTap(event);
+        },
+        { passive: false },
+      );
+    } else if (window.PointerEvent) {
+      battlePanel.addEventListener(
+        "pointerdown",
+        attackFromBattleTap,
+        { passive: false },
+      );
+    } else {
+      battlePanel.addEventListener("click", (event) => {
+        if (!shouldHandleBattleTap(event)) return;
+        window.GameBattle.onTapEnemy();
+      });
+    }
+    battlePanel.addEventListener("click", (event) => {
+      if (!window.PointerEvent || event.detail !== 0) return;
+      if (!shouldHandleBattleTap(event)) return;
+      window.GameBattle.onTapEnemy();
+    });
+    battlePanel.addEventListener(
+      "dblclick",
+      (event) => event.preventDefault(),
+      { passive: false },
+    );
     ui.els.challengeBossBtn.addEventListener(
       "click",
       window.GameEnemies.startBossBattle,
@@ -306,11 +408,20 @@
     ui.els.buyTapBtn.addEventListener("click", () =>
       window.GameBattle.purchaseUpgrade("tap"),
     );
+    ui.els.maxTapBtn.addEventListener("click", () =>
+      window.GameBattle.purchaseMaxUpgrade("tap"),
+    );
     ui.els.buyCritBtn.addEventListener("click", () =>
       window.GameBattle.purchaseUpgrade("crit"),
     );
+    ui.els.maxCritBtn.addEventListener("click", () =>
+      window.GameBattle.purchaseMaxUpgrade("crit"),
+    );
     ui.els.buyCritDmgBtn.addEventListener("click", () =>
       window.GameBattle.purchaseUpgrade("critDamage"),
+    );
+    ui.els.maxCritDmgBtn.addEventListener("click", () =>
+      window.GameBattle.purchaseMaxUpgrade("critDamage"),
     );
 
     document
@@ -450,6 +561,14 @@
         return;
       }
       if (!(target instanceof HTMLInputElement)) return;
+      if (target.id === "autoDiscardAttackInput") {
+        state.itemSettings.autoDiscardAttackPercent = Math.max(
+          0,
+          Number(target.value) || 0,
+        );
+        saveGame();
+        return;
+      }
       if (target.id === "autoChallengeBossCheckbox") {
         state.settings.autoChallengeBoss = target.checked;
         if (
@@ -480,6 +599,7 @@
       window.GameUI.enemyButton().textContent = "";
     }
     ui.render();
+    showIntroPopupIfNeeded();
     requestAnimationFrame(gameLoop);
   }
 

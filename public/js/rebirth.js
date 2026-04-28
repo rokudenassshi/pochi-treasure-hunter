@@ -3,6 +3,8 @@
   const { treasureDefinitions = [], treasureRewardRarities = {} } =
     window.GameConfig;
   const REBIRTH_FLOOR_INTERVAL = 50;
+  const NEXT_UNLOCK_TREASURE_CHANCE = 0.01;
+  const NEXT_UNLOCK_TREASURE_FLOOR_INTERVAL = 100;
   const treasureDefinitionMap = new Map(
     treasureDefinitions.map((treasure) => [treasure.id, treasure]),
   );
@@ -31,7 +33,9 @@
   function clampTreasureCount(treasureId, count) {
     const normalizedCount = Math.max(0, Math.floor(Number(count) || 0));
     const maxCount = getTreasureMaxCount(treasureId);
-    return maxCount === null ? normalizedCount : Math.min(normalizedCount, maxCount);
+    return maxCount === null
+      ? normalizedCount
+      : Math.min(normalizedCount, maxCount);
   }
 
   function isTreasureAtMax(treasureId, treasures = ensureTreasures()) {
@@ -333,11 +337,17 @@
   }
 
   function getNextRebirthExtraTreasureCount() {
-    return Math.max(0, Math.floor(getTreasureSummary().nextRebirthExtraTreasureCount));
+    return Math.max(
+      0,
+      Math.floor(getTreasureSummary().nextRebirthExtraTreasureCount),
+    );
   }
 
   function getRebirthStartingGoldBonus() {
-    return Math.max(0, Math.floor(getTreasureSummary().rebirthStartingGoldBonus));
+    return Math.max(
+      0,
+      Math.floor(getTreasureSummary().rebirthStartingGoldBonus),
+    );
   }
 
   function getEnemyGoldDoubleChance() {
@@ -345,7 +355,10 @@
   }
 
   function getBossTreasureRewardCount() {
-    return Math.max(0, Math.floor(getTreasureSummary().bossTreasureRewardCount));
+    return Math.max(
+      0,
+      Math.floor(getTreasureSummary().bossTreasureRewardCount),
+    );
   }
 
   function getBossTreasureRewardFloorOffset() {
@@ -377,7 +390,10 @@
       );
       if (extraTreasureCount <= 0) continue;
 
-      const consumedCount = removeTreasure(treasure.id, getTreasureCount(treasure.id));
+      const consumedCount = removeTreasure(
+        treasure.id,
+        getTreasureCount(treasure.id),
+      );
       if (consumedCount <= 0) continue;
 
       consumedEntries.push({
@@ -401,6 +417,34 @@
         reachFloor >= (Number(treasure.unlockFloor) || 1) &&
         !isTreasureAtMax(treasure.id, treasures),
     );
+  }
+
+  function getNextUnlockTreasureFloor(reachFloor = getReachFloor()) {
+    const safeReachFloor = Math.max(0, Math.floor(Number(reachFloor) || 0));
+    if (
+      safeReachFloor < NEXT_UNLOCK_TREASURE_FLOOR_INTERVAL ||
+      safeReachFloor % NEXT_UNLOCK_TREASURE_FLOOR_INTERVAL !== 0
+    ) {
+      return null;
+    }
+
+    const unlockFloors = treasureDefinitions
+      .map((treasure) => Number(treasure.unlockFloor) || 1)
+      .filter((unlockFloor) => unlockFloor > safeReachFloor)
+      .sort((a, b) => a - b);
+
+    return unlockFloors[0] || null;
+  }
+
+  function getNextUnlockTreasureChance() {
+    const nextUnlockFloor = getNextUnlockTreasureFloor();
+    if (nextUnlockFloor === null) return 0;
+    const eligibleTreasures = getEligibleTreasureDefinitionsForFloor(
+      nextUnlockFloor,
+    ).filter(
+      (treasure) => (Number(treasure.unlockFloor) || 1) === nextUnlockFloor,
+    );
+    return eligibleTreasures.length > 0 ? NEXT_UNLOCK_TREASURE_CHANCE : 0;
   }
 
   function getEligibleTreasureDefinitions() {
@@ -447,13 +491,62 @@
     const rewards = new Map();
 
     for (let index = 0; index < rewardCount; index += 1) {
-      const eligibleTreasures = getEligibleTreasureDefinitionsForFloor(rewardFloor);
+      const eligibleTreasures =
+        getEligibleTreasureDefinitionsForFloor(rewardFloor);
       if (eligibleTreasures.length === 0) break;
       const treasure = pickWeightedTreasure(eligibleTreasures);
       if (!treasure) break;
       const addedAmount = addTreasure(treasure.id, 1);
       if (addedAmount <= 0) continue;
       rewards.set(treasure.id, (rewards.get(treasure.id) || 0) + addedAmount);
+    }
+
+    return treasureDefinitions
+      .filter((treasure) => rewards.has(treasure.id))
+      .map((treasure) => ({
+        ...treasure,
+        rewardedCount: rewards.get(treasure.id) || 0,
+      }));
+  }
+
+  function grantNextUnlockTreasureReward() {
+    const nextUnlockFloor = getNextUnlockTreasureFloor();
+    if (
+      nextUnlockFloor === null ||
+      Math.random() >= NEXT_UNLOCK_TREASURE_CHANCE
+    ) {
+      return [];
+    }
+
+    const eligibleTreasures = getEligibleTreasureDefinitionsForFloor(
+      nextUnlockFloor,
+    ).filter(
+      (treasure) => (Number(treasure.unlockFloor) || 1) === nextUnlockFloor,
+    );
+    const treasure = pickWeightedTreasure(eligibleTreasures);
+    if (!treasure) return [];
+
+    const addedAmount = addTreasure(treasure.id, 1);
+    if (addedAmount <= 0) return [];
+
+    return [
+      {
+        ...treasure,
+        rewardedCount: addedAmount,
+      },
+    ];
+  }
+
+  function mergeRewardEntries(...rewardEntryLists) {
+    const rewards = new Map();
+
+    for (const rewardEntries of rewardEntryLists) {
+      for (const treasure of rewardEntries) {
+        rewards.set(
+          treasure.id,
+          (rewards.get(treasure.id) || 0) + treasure.rewardedCount,
+        );
+      }
     }
 
     return treasureDefinitions
@@ -484,7 +577,10 @@
       }
     }
 
-    for (const treasure of grantTreasureRewards(remainingRewardCount, rewardFloor)) {
+    for (const treasure of grantTreasureRewards(
+      remainingRewardCount,
+      rewardFloor,
+    )) {
       rewards.set(
         treasure.id,
         (rewards.get(treasure.id) || 0) + treasure.rewardedCount,
@@ -503,7 +599,8 @@
     const rewardCount = getBossTreasureRewardCount();
     if (rewardCount <= 0) return null;
     const safeBossFloor = Math.max(1, Number(bossFloor) || 1);
-    const rewardBandCount = Math.floor(Math.max(0, safeBossFloor - 10) / 100) + 1;
+    const rewardBandCount =
+      Math.floor(Math.max(0, safeBossFloor - 10) / 100) + 1;
     const rewardFloor = Math.max(
       REBIRTH_FLOOR_INTERVAL,
       getBossTreasureRewardFloorOffset() * rewardBandCount,
@@ -570,6 +667,11 @@
     const rewardedTreasures = grantRebirthTreasures(
       rewardCount + extraRewardCount + guaranteedExtraRewardCount,
     );
+    const nextUnlockRewardedTreasures = grantNextUnlockTreasureReward();
+    const allRewardedTreasures = mergeRewardEntries(
+      rewardedTreasures,
+      nextUnlockRewardedTreasures,
+    );
 
     recordDungeonClear();
     resetProgressForRebirth();
@@ -584,13 +686,18 @@
     if (extraRewardCount > 0) {
       rewardNotes.push("追加秘宝が発動し");
     }
+    if (nextUnlockRewardedTreasures.length > 0) {
+      rewardNotes.push("通常よりレアな秘宝をゲット");
+    }
 
-    if (rewardedTreasures.length > 0) {
+    if (allRewardedTreasures.length > 0) {
       window.GameUI.addLog(
-        `次のダンジョンへ行った。${rewardNotes.length ? `${rewardNotes.join("、")}、` : ""}${formatRewardSummary(rewardedTreasures)}を入手した。`,
+        `次のダンジョンへ行った。${rewardNotes.length ? `${rewardNotes.join("、")}、` : ""}${formatRewardSummary(allRewardedTreasures)}を入手した。`,
       );
     } else if (rewardNotes.length > 0) {
-      window.GameUI.addLog(`次のダンジョンへ行った。${rewardNotes.join("、")}。`);
+      window.GameUI.addLog(
+        `次のダンジョンへ行った。${rewardNotes.join("、")}。`,
+      );
     } else {
       window.GameUI.addLog("次のダンジョンへ行った。");
     }
@@ -622,6 +729,7 @@
     getItemDropRateBonus,
     getDroppedEquipmentAttackBonus,
     getExtraTreasureChance,
+    getNextUnlockTreasureChance,
     getFloorSkipChance,
     getNextRebirthExtraTreasureCount,
     getRebirthStartingGoldBonus,

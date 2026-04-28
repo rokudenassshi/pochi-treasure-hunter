@@ -264,10 +264,16 @@
     state.inventory.unshift(item);
     window.GameUI.addLog(`装備ドロップ: ${item.rarityName} ${itemName} を入手。`);
 
-    if (shouldAutoDiscardRarity(item.rarity)) {
+    if (shouldAutoDiscardItem(item)) {
       state.inventory = state.inventory.filter((entry) => entry.id !== item.id);
       window.GameUI.addLog(`自動破棄: ${item.rarityName} ${itemName} を捨てた。`);
     }
+  }
+
+  function getItemMainStatPercent(item) {
+    const typeDef = equipmentTypeDefinitions[item?.type];
+    if (!typeDef?.mainStatKey) return 0;
+    return Math.max(0, Number(item[typeDef.mainStatKey]) || 0);
   }
 
   function shouldAutoDiscardRarity(itemRarity) {
@@ -286,6 +292,18 @@
       itemRarityIndex >= 0 &&
       itemRarityIndex <= autoDiscardThreshold
     );
+  }
+
+  function shouldAutoDiscardAttack(item) {
+    const thresholdPercent =
+      Math.max(0, Number(state.itemSettings.autoDiscardAttackPercent) || 0) /
+      100;
+    if (thresholdPercent <= 0) return false;
+    return getItemMainStatPercent(item) < thresholdPercent;
+  }
+
+  function shouldAutoDiscardItem(item) {
+    return shouldAutoDiscardRarity(item.rarity) || shouldAutoDiscardAttack(item);
   }
 
   function isItemLocked(itemId) {
@@ -435,5 +453,7 @@
     bulkSynthesizeItem,
     canSynthesizeItem,
     shouldAutoDiscardRarity,
+    shouldAutoDiscardAttack,
+    shouldAutoDiscardItem,
   };
 })();

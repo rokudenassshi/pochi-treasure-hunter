@@ -44,6 +44,10 @@ body {
   margin-bottom: 12px;
 }
 .panel-inner-gap + .panel-inner-gap { margin-top: 16px; }
+.battle-panel {
+  touch-action: none;
+  -ms-touch-action: none;
+}
 .topbar {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -87,7 +91,8 @@ body {
 .enemy-area {
   user-select: none;
   -webkit-user-select: none;
-  touch-action: manipulation;
+  touch-action: none;
+  -ms-touch-action: none;
   position: relative;
   height: 220px;
   border-radius: 18px;
@@ -101,7 +106,10 @@ body {
 }
 .enemy {
   -webkit-user-select: none;
-  touch-action: manipulation;
+  user-select: none;
+  touch-action: none;
+  -ms-touch-action: none;
+  -webkit-touch-callout: none;
   width: min(240px, calc(100% - 24px));
   height: 180px;
   border: none;
@@ -326,6 +334,11 @@ body {
   padding: 8px 10px;
   font-size: 13px;
 }
+.equip-setting-number {
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: right;
+}
 .equip-setting-button {
   min-width: 88px;
 }
@@ -377,6 +390,11 @@ body {
 .modal-content h3 {
   margin: 0 0 16px 0;
   font-size: 18px;
+}
+.modal-content p {
+  margin: 0 0 10px;
+  color: var(--sub);
+  line-height: 1.6;
 }
 .modal-content input {
   width: 100%;

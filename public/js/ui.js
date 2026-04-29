@@ -460,7 +460,6 @@
     const bossTreasureRewardFloorOffset =
       window.GameRebirth.getBossTreasureRewardFloorOffset();
     const bossDamagePercent = window.GameRebirth.getBossDamagePercent();
-    const bossTimeBonusSeconds = window.GameRebirth.getBossTimeBonusSeconds();
     const ownedTreasures = window.GameRebirth.getOwnedTreasureEntries();
     const treasureEffectSummary = [];
     if (playerAttackBonus > 0) {
@@ -556,11 +555,6 @@
         `ボスダメージ +${formatPercent(bossDamagePercent, 0)}%`,
       );
     }
-    if (bossTimeBonusSeconds > 0) {
-      treasureEffectSummary.push(
-        `ボス制限時間 +${formatNumber(bossTimeBonusSeconds)}秒`,
-      );
-    }
     const treasureRows = ownedTreasures
       .map((treasure) => {
         const effectLines = [];
@@ -653,11 +647,6 @@
         if (treasure.totalBossDamagePercent) {
           effectLines.push(
             `合計ボスダメージ +${formatPercent(treasure.totalBossDamagePercent, 0)}%`,
-          );
-        }
-        if (treasure.totalBossTimeBonusSeconds) {
-          effectLines.push(
-            `合計ボス制限時間 +${formatNumber(treasure.totalBossTimeBonusSeconds)}秒`,
           );
         }
         return `<div class="row-card"><div class="row-top"><div><div class="item-name">${treasure.name} x${formatNumber(treasure.count)}</div><div class="small">${treasure.description}${effectLines.length ? ` / ${effectLines.join(" / ")}` : ""}</div></div></div></div>`;

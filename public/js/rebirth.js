@@ -145,7 +145,6 @@
     let bossTreasureRewardCount = 0;
     let bossTreasureRewardFloorOffset = 0;
     let bossDamagePercent = 0;
-    let bossTimeBonusSeconds = 0;
 
     for (const treasure of treasureDefinitions) {
       const count = Math.max(0, Number(treasures[treasure.id]) || 0);
@@ -187,8 +186,6 @@
         count * (Number(treasure.bossTreasureRewardFloorOffset) || 0);
       const totalBossDamagePercent =
         count * (Number(treasure.bossDamagePercent) || 0);
-      const totalBossTimeBonusSeconds =
-        count * (Number(treasure.bossTimeBonusSeconds) || 0);
       const entry = {
         ...treasure,
         count,
@@ -212,7 +209,6 @@
         totalBossTreasureRewardCount,
         totalBossTreasureRewardFloorOffset,
         totalBossDamagePercent,
-        totalBossTimeBonusSeconds,
       };
 
       entries.push(entry);
@@ -238,7 +234,6 @@
       bossTreasureRewardCount += totalBossTreasureRewardCount;
       bossTreasureRewardFloorOffset += totalBossTreasureRewardFloorOffset;
       bossDamagePercent += totalBossDamagePercent;
-      bossTimeBonusSeconds += totalBossTimeBonusSeconds;
     }
 
     treasureSummaryCache = {
@@ -264,7 +259,6 @@
       bossTreasureRewardCount,
       bossTreasureRewardFloorOffset,
       bossDamagePercent,
-      bossTimeBonusSeconds,
     };
     return treasureSummaryCache;
   }
@@ -371,10 +365,6 @@
 
   function getBossDamagePercent() {
     return getTreasureSummary().bossDamagePercent;
-  }
-
-  function getBossTimeBonusSeconds() {
-    return getTreasureSummary().bossTimeBonusSeconds;
   }
 
   function rollExtraTreasureRewardCount() {
@@ -739,7 +729,6 @@
     getBossTreasureRewardFloorOffset,
     getBossTreasureRewardFloor,
     getBossDamagePercent,
-    getBossTimeBonusSeconds,
     getAttackBonus,
     grantBossDefeatTreasures,
     rebirth,

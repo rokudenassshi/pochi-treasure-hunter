@@ -100,10 +100,7 @@
     const equipmentBonus = window.GameItems?.getEquippedOptionTotal
       ? window.GameItems.getEquippedOptionTotal("bossTimeBonusSeconds")
       : 0;
-    const treasureBonus = window.GameRebirth?.getBossTimeBonusSeconds
-      ? window.GameRebirth.getBossTimeBonusSeconds()
-      : 0;
-    return Math.floor(equipmentBonus + treasureBonus);
+    return Math.floor(equipmentBonus);
   }
 
   function getBossTimeLimit() {

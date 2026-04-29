@@ -83,7 +83,8 @@
   }
 
   function getRebirthRewardCount() {
-    return Math.floor(getReachFloor() / REBIRTH_FLOOR_INTERVAL);
+    const tierCount = Math.floor(getReachFloor() / REBIRTH_FLOOR_INTERVAL);
+    return (tierCount * (tierCount + 1)) / 2;
   }
 
   function canRebirth() {

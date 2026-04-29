@@ -345,7 +345,7 @@
       name: "ロングソード",
       description: "攻撃力 +10",
       attackBonus: 10,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "warGodBattleStandard",
@@ -353,7 +353,7 @@
       name: "軍神の戦旗",
       description: "仲間の攻撃力 +10",
       allyAttackBonus: 10,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "goldenCoin",
@@ -361,7 +361,7 @@
       name: "黄金のコイン",
       description: "獲得ゴールド +100",
       goldBonus: 100,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "masterTrainingBook",
@@ -369,7 +369,7 @@
       name: "達人の訓練書",
       description: "プレイヤー強化費用 -100",
       playerUpgradeCostReduction: 100,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "generalCommandFlag",
@@ -377,7 +377,7 @@
       name: "将軍の指揮旗",
       description: "仲間強化費用 -100",
       allyUpgradeCostReduction: 100,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "unyieldingSand",
@@ -385,7 +385,7 @@
       name: "不屈の砂",
       description: "ボス制限時間 +1秒",
       bossTimeBonusSeconds: 1,
-      unlockFloor: 300,
+      unlockFloor: 200,
       maxCount: 10,
     },
     {
@@ -394,7 +394,7 @@
       name: "会心の仮面",
       description: "会心率 +1%",
       critChanceBonus: 0.01,
-      unlockFloor: 300,
+      unlockFloor: 200,
       maxCount: 100,
     },
     {
@@ -403,7 +403,7 @@
       name: "断罪の印",
       description: "クリティカルダメージ +1%",
       critDamageBonus: 0.01,
-      unlockFloor: 300,
+      unlockFloor: 200,
     },
     {
       id: "pursuitGauntlet",
@@ -411,7 +411,7 @@
       name: "追撃の籠手",
       description: "タップ時に仲間追撃発生率 +1%",
       tapAllyAttackChanceBonus: 0.01,
-      unlockFloor: 300,
+      unlockFloor: 200,
       maxCount: 100,
     },
     {
@@ -420,7 +420,7 @@
       name: "覇者の紋章",
       description: "ボスダメージ +2%",
       bossDamagePercent: 0.02,
-      unlockFloor: 300,
+      unlockFloor: 200,
       maxCount: 50,
     },
     {
@@ -429,16 +429,7 @@
       name: "軍資金袋",
       description: "次のダンジョン開始時ゴールド +10",
       rebirthStartingGoldBonus: 10,
-      unlockFloor: 300,
-    },
-    {
-      id: "slayerEmblem",
-      rewardRarity: "uncommon",
-      name: "討伐者の紋章",
-      description: "ボスダメージ +1%",
-      bossDamagePercent: 0.01,
-      unlockFloor: 400,
-      maxCount: 100,
+      unlockFloor: 200,
     },
     {
       id: "judgmentSeal",

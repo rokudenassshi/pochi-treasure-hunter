@@ -190,7 +190,7 @@
     els.maxCritBtn.disabled = state.gold < costs.crit;
     els.maxCritDmgBtn.disabled = state.gold < costs.critDamage;
     els.rebirthDescriptionText.textContent =
-      `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに秘宝獲得 / 今回 ${formatNumber(rewardCount)}個${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
+      `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに加算量 +1ずつ増加 / 今回 ${formatNumber(rewardCount)}個${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
     els.rebirthBtn.disabled = rewardCount <= 0;
   }
 

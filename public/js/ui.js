@@ -703,6 +703,8 @@
     const goldGainPercent = window.GameBattle.getGoldGainPercent();
     const tapAllyAttackChance = window.GameBattle.getTapAllyAttackChance();
     const bossDamagePercent = window.GameBattle.getBossDamagePercent();
+    const normalEnemyDamagePercent =
+      window.GameBattle.getNormalEnemyDamagePercent();
     const itemDropChance = window.GameItems.getItemDropChance();
     const itemDropBonus = window.GameItems.getEquippedOptionTotal(
       "itemDropRatePercent",
@@ -725,6 +727,10 @@
       window.GameRebirth?.getAllyAttackIntervalReductionSeconds
         ? window.GameRebirth.getAllyAttackIntervalReductionSeconds()
         : 0;
+    const equipmentAllyAttackIntervalReductionSeconds =
+      window.GameItems.getEquippedOptionTotal(
+        "allyAttackIntervalReductionSeconds",
+      );
     const treasureGoldBonus = window.GameRebirth?.getGoldBonus
       ? window.GameRebirth.getGoldBonus()
       : 0;
@@ -742,6 +748,10 @@
     const treasureExtraTreasureChance = window.GameRebirth?.getExtraTreasureChance
       ? window.GameRebirth.getExtraTreasureChance()
       : 0;
+    const treasureRarityBonusPercent =
+      window.GameRebirth?.getTreasureRarityBonusPercent
+        ? window.GameRebirth.getTreasureRarityBonusPercent()
+        : 0;
     const treasureFloorSkipChance = window.GameRebirth?.getFloorSkipChance
       ? window.GameRebirth.getFloorSkipChance()
       : 0;
@@ -824,6 +834,11 @@
         `仲間攻撃間隔: -${formatSeconds(treasureAllyAttackIntervalReductionSeconds)}秒`,
       );
     }
+    if (equipmentAllyAttackIntervalReductionSeconds > 0) {
+      allyLines.push(
+        `装備仲間攻撃間隔: -${formatSeconds(equipmentAllyAttackIntervalReductionSeconds)}秒`,
+      );
+    }
     if (tapAllyAttackChance > 0) {
       allyLines.push(
         `タップ時仲間追撃率: ${formatPercent(tapAllyAttackChance, 1)}%`,
@@ -846,6 +861,11 @@
         `ボスダメージ: +${formatPercent(bossDamagePercent, 1)}%`,
       );
     }
+    if (normalEnemyDamagePercent > 0) {
+      equipmentLines.push(
+        `通常敵ダメージ: +${formatPercent(normalEnemyDamagePercent, 1)}%`,
+      );
+    }
     if (bossTimeBonus > 0) {
       equipmentLines.push(
         `ボス制限時間: ${bossTimeLimit}秒 (+${bossTimeBonus}秒)`,
@@ -864,6 +884,11 @@
     if (treasureExtraTreasureChance > 0) {
       collectionLines.push(
         `追加秘宝率: ${formatPercent(treasureExtraTreasureChance, 0)}%`,
+      );
+    }
+    if (treasureRarityBonusPercent > 0) {
+      collectionLines.push(
+        `高レア秘宝率: +${formatPercent(treasureRarityBonusPercent, 0)}%`,
       );
     }
     if (treasureFloorSkipChance > 0) {

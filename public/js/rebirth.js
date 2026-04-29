@@ -6,6 +6,12 @@
   const NEXT_UNLOCK_TREASURE_CHANCE = 0.01;
   const NEXT_UNLOCK_TREASURE_FLOOR_INTERVAL = 100;
   const ALLY_JOB_ATTACK_BONUS_JOB_IDS = ["warrior", "swordsman", "hunter"];
+  const TREASURE_RARITY_BONUS_STEPS = {
+    common: 0,
+    uncommon: 1,
+    rare: 2,
+    epic: 3,
+  };
   const treasureDefinitionMap = new Map(
     treasureDefinitions.map((treasure) => [treasure.id, treasure]),
   );
@@ -86,6 +92,12 @@
   function getAllyTreasureRewardBonusCount() {
     return window.GameAllies?.getTreasureRewardBonusCount
       ? window.GameAllies.getTreasureRewardBonusCount()
+      : 0;
+  }
+
+  function getEquippedOptionTotal(key) {
+    return window.GameItems?.getEquippedOptionTotal
+      ? window.GameItems.getEquippedOptionTotal(key)
       : 0;
   }
 
@@ -343,7 +355,15 @@
   }
 
   function getExtraTreasureChance() {
-    return Math.min(1, getTreasureSummary().extraTreasureChance);
+    return Math.min(
+      1,
+      getTreasureSummary().extraTreasureChance +
+        getEquippedOptionTotal("extraTreasureChance"),
+    );
+  }
+
+  function getTreasureRarityBonusPercent() {
+    return Math.max(0, getEquippedOptionTotal("treasureRarityBonusPercent"));
   }
 
   function getFloorSkipChance() {
@@ -464,10 +484,14 @@
   function getTreasureRewardWeight(treasure) {
     const rarityKey = treasure?.rewardRarity || "common";
     const rarityWeight = Number(treasureRewardRarities[rarityKey]?.weight);
+    const rarityBonusStep = TREASURE_RARITY_BONUS_STEPS[rarityKey] || 0;
+    const rarityBonusMultiplier =
+      1 + getTreasureRarityBonusPercent() * rarityBonusStep;
     if (Number.isFinite(rarityWeight) && rarityWeight > 0) {
-      return rarityWeight;
+      return rarityWeight * rarityBonusMultiplier;
     }
-    return Number(treasureRewardRarities.common?.weight) || 1;
+    return (Number(treasureRewardRarities.common?.weight) || 1) *
+      rarityBonusMultiplier;
   }
 
   function pickWeightedTreasure(treasures) {
@@ -743,6 +767,7 @@
     getItemDropRateBonus,
     getDroppedEquipmentAttackBonus,
     getExtraTreasureChance,
+    getTreasureRarityBonusPercent,
     getNextUnlockTreasureChance,
     getFloorSkipChance,
     getNextRebirthExtraTreasureCount,

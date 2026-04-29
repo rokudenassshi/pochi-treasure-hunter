@@ -180,9 +180,12 @@
     item.critDamageBonus = 0;
     item.superCritChance = 0;
     item.goldGainPercent = 0;
-    item.tapAllyAttackChance = 0;
     item.itemDropRatePercent = 0;
     item.bossDamagePercent = 0;
+    item.normalEnemyDamagePercent = 0;
+    item.extraTreasureChance = 0;
+    item.treasureRarityBonusPercent = 0;
+    item.allyAttackIntervalReductionSeconds = 0;
     item.bossTimeBonusSeconds = 0;
 
     for (const option of options) {
@@ -406,7 +409,10 @@
       return `${option.label} +${(option.value * 100).toFixed(1)}%`;
     }
     if (option.unit === "秒") {
-      return `${option.label} +${Math.round(option.value)}秒`;
+      const value = Number.isInteger(option.value)
+        ? String(option.value)
+        : option.value.toFixed(1);
+      return `${option.label} +${value}秒`;
     }
     return `${option.label} +${option.value.toFixed(2)}`;
   }

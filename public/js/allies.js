@@ -35,6 +35,10 @@
       : 0;
   }
 
+  function getEquipmentAllyAttackIntervalReductionSeconds() {
+    return getEquippedOptionTotal("allyAttackIntervalReductionSeconds");
+  }
+
   function getTreasureAllyJobAttackBonus(jobId) {
     return window.GameRebirth?.getAllyJobAttackBonus
       ? window.GameRebirth.getAllyJobAttackBonus(jobId)
@@ -100,7 +104,9 @@
     const attackIntervalSeconds = Number(ally?.attackIntervalSeconds) || 0;
     if (attackIntervalSeconds <= 0) return 0;
     const reducedInterval =
-      attackIntervalSeconds - getTreasureAllyAttackIntervalReductionSeconds();
+      attackIntervalSeconds -
+      getTreasureAllyAttackIntervalReductionSeconds() -
+      getEquipmentAllyAttackIntervalReductionSeconds();
     return Math.max(MIN_ALLY_ATTACK_INTERVAL_SECONDS, reducedInterval);
   }
 

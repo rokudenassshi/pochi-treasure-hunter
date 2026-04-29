@@ -130,11 +130,7 @@
   }
 
   function getTapAllyAttackChance() {
-    return Math.min(
-      1,
-      getEquippedOptionTotal("tapAllyAttackChance") +
-        getTreasureTapAllyAttackChanceBonus(),
-    );
+    return Math.min(1, getTreasureTapAllyAttackChanceBonus());
   }
 
   function getBossDamagePercent() {
@@ -143,9 +139,14 @@
     );
   }
 
-  function applyBossDamageBonus(amount) {
-    if (!state.enemy?.isBoss) return amount;
-    const bonus = getBossDamagePercent();
+  function getNormalEnemyDamagePercent() {
+    return getEquippedOptionTotal("normalEnemyDamagePercent");
+  }
+
+  function applyEnemyTypeDamageBonus(amount) {
+    const bonus = state.enemy?.isBoss
+      ? getBossDamagePercent()
+      : getNormalEnemyDamagePercent();
     if (bonus <= 0) return amount;
     let damage = Math.floor(amount * (1 + bonus));
     if (damage <= amount) damage = amount + 1;
@@ -257,7 +258,7 @@
     isSuperCrit = false,
   ) {
     if (!state.enemy) return;
-    const finalAmount = applyBossDamageBonus(amount);
+    const finalAmount = applyEnemyTypeDamageBonus(amount);
     state.enemy.hp = Math.max(0, state.enemy.hp - finalAmount);
     state.recentAutoDamage += finalAmount;
     if (source !== "ally") {
@@ -389,6 +390,7 @@
     calcSuperCritChance,
     getTapAllyAttackChance,
     getBossDamagePercent,
+    getNormalEnemyDamagePercent,
     getGoldGainPercent,
     getUpgradeCosts,
     getUpgradeDescriptions,

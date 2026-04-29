@@ -25,7 +25,10 @@
       window.innerWidth || document.documentElement.clientWidth || 520,
       520,
     );
-    document.documentElement.style.setProperty("--app-fixed-width", `${width}px`);
+    document.documentElement.style.setProperty(
+      "--app-fixed-width",
+      `${width}px`,
+    );
   }
 
   function showIntroPopupIfNeeded() {
@@ -91,11 +94,12 @@
   }
 
   function refreshNextAllyId() {
-    const maxId = (Array.isArray(state.alliesOwned) ? state.alliesOwned : [])
-      .reduce((currentMax, ally) => {
-        const match = String(ally?.uid || "").match(/^ally-(\d+)$/);
-        return Math.max(currentMax, match ? Number(match[1]) || 0 : 0);
-      }, 0);
+    const maxId = (
+      Array.isArray(state.alliesOwned) ? state.alliesOwned : []
+    ).reduce((currentMax, ally) => {
+      const match = String(ally?.uid || "").match(/^ally-(\d+)$/);
+      return Math.max(currentMax, match ? Number(match[1]) || 0 : 0);
+    }, 0);
     state.nextAllyId = Math.max(1, maxId + 1, Number(state.nextAllyId) || 1);
   }
 
@@ -127,7 +131,13 @@
         template,
       ]),
     );
-    const legacyJobIds = ["warrior", "swordsman", "hunter", "merchant", "fighter"];
+    const legacyJobIds = [
+      "warrior",
+      "swordsman",
+      "hunter",
+      "merchant",
+      "fighter",
+    ];
 
     function getLegacyJobId(allyId) {
       const match = String(allyId || "").match(/^ally(\d+)$/);
@@ -153,7 +163,10 @@
           uid: ally?.uid || `ally-${index + 1}`,
           jobId: template.id,
           name: String(template.name),
-          level: Math.max(1, Math.floor(Number(ally?.level) || legacyPartyLevel)),
+          level: Math.max(
+            1,
+            Math.floor(Number(ally?.level) || legacyPartyLevel),
+          ),
           baseAtk: Math.max(0, Number(template.baseAtk) || 0),
           attackIntervalSeconds: Math.max(
             0,
@@ -179,7 +192,10 @@
       state.player = {
         tapLevel: Math.max(1, Number(state.player?.tapLevel) || 1),
         critLevel: Math.max(0, Number(state.player?.critLevel) || 0),
-        critDamageLevel: Math.max(0, Number(state.player?.critDamageLevel) || 0),
+        critDamageLevel: Math.max(
+          0,
+          Number(state.player?.critDamageLevel) || 0,
+        ),
         goggles: state.player?.goggles || null,
         compass: state.player?.compass || null,
       };
@@ -248,6 +264,7 @@
 
   const ACTIVE_LOOP_INTERVAL_MS = 50;
   const HIDDEN_LOOP_INTERVAL_MS = 250;
+  const HOLD_ATTACK_INTERVAL_MS = 1000;
   let lastLoopFrameAt = 0;
 
   function equipItem(itemId) {
@@ -269,7 +286,8 @@
   }
 
   function unequipItem(type) {
-    const item = type === "goggles" ? state.player.goggles : state.player.compass;
+    const item =
+      type === "goggles" ? state.player.goggles : state.player.compass;
     if (!item) return;
 
     const itemName = window.GameItems.getItemDisplayName(item);
@@ -374,24 +392,56 @@
       (event) => event.preventDefault(),
       { passive: false },
     );
-    document.addEventListener(
-      "gestureend",
-      (event) => event.preventDefault(),
-      { passive: false },
-    );
+    document.addEventListener("gestureend", (event) => event.preventDefault(), {
+      passive: false,
+    });
     const enemyArea = ui.enemyArea();
     const battlePanel = document.querySelector(".battle-panel") || enemyArea;
+    let holdAttackTimerId = null;
+    let activePointerId = null;
+    let activeTouchId = null;
+
     function shouldHandleBattleTap(event) {
       const target = event.target;
       if (!(target instanceof HTMLElement)) return true;
-      const interactiveTarget = target.closest("button, a, input, select, textarea");
+      const interactiveTarget = target.closest(
+        "button, a, input, select, textarea",
+      );
       return !interactiveTarget || interactiveTarget === ui.enemyButton();
+    }
+
+    function clearHoldAttackTimer() {
+      if (holdAttackTimerId !== null) {
+        window.clearInterval(holdAttackTimerId);
+        holdAttackTimerId = null;
+      }
+    }
+
+    function stopHoldAttack() {
+      clearHoldAttackTimer();
+      activePointerId = null;
+      activeTouchId = null;
+    }
+
+    function startHoldAttack() {
+      clearHoldAttackTimer();
+      holdAttackTimerId = window.setInterval(() => {
+        window.GameBattle.onTapEnemy();
+      }, HOLD_ATTACK_INTERVAL_MS);
     }
 
     function attackFromBattleTap(event) {
       if (!shouldHandleBattleTap(event)) return;
       event.preventDefault();
       window.GameBattle.onTapEnemy();
+      startHoldAttack();
+    }
+
+    function touchListHasIdentifier(touches, identifier) {
+      for (let index = 0; index < touches.length; index += 1) {
+        if (touches[index].identifier === identifier) return true;
+      }
+      return false;
     }
 
     const isTouchDevice =
@@ -402,18 +452,76 @@
         (event) => {
           if (!shouldHandleBattleTap(event)) return;
           if (event.touches.length > 1) return;
+          activeTouchId = event.changedTouches[0]?.identifier ?? null;
           attackFromBattleTap(event);
+        },
+        { passive: false },
+      );
+      battlePanel.addEventListener(
+        "touchend",
+        (event) => {
+          if (
+            activeTouchId === null ||
+            touchListHasIdentifier(event.changedTouches, activeTouchId)
+          ) {
+            stopHoldAttack();
+          }
+        },
+        { passive: false },
+      );
+      battlePanel.addEventListener(
+        "touchcancel",
+        (event) => {
+          if (
+            activeTouchId === null ||
+            touchListHasIdentifier(event.changedTouches, activeTouchId)
+          ) {
+            stopHoldAttack();
+          }
         },
         { passive: false },
       );
     } else if (window.PointerEvent) {
       battlePanel.addEventListener(
         "pointerdown",
-        attackFromBattleTap,
+        (event) => {
+          if (event.button !== 0 || event.isPrimary === false) return;
+          if (!shouldHandleBattleTap(event)) return;
+          activePointerId = event.pointerId;
+          if (battlePanel.setPointerCapture) {
+            battlePanel.setPointerCapture(activePointerId);
+          }
+          attackFromBattleTap(event);
+        },
         { passive: false },
       );
+      const stopPointerHoldAttack = (event) => {
+        if (activePointerId !== null && event.pointerId !== activePointerId) {
+          return;
+        }
+        if (
+          activePointerId !== null &&
+          battlePanel.hasPointerCapture?.(activePointerId)
+        ) {
+          battlePanel.releasePointerCapture(activePointerId);
+        }
+        stopHoldAttack();
+      };
+      battlePanel.addEventListener("pointerup", stopPointerHoldAttack);
+      battlePanel.addEventListener("pointercancel", stopPointerHoldAttack);
+      battlePanel.addEventListener("lostpointercapture", stopPointerHoldAttack);
     } else {
+      battlePanel.addEventListener(
+        "mousedown",
+        (event) => {
+          if (event.button !== 0) return;
+          attackFromBattleTap(event);
+        },
+        { passive: false },
+      );
+      window.addEventListener("mouseup", stopHoldAttack);
       battlePanel.addEventListener("click", (event) => {
+        if (event.detail !== 0) return;
         if (!shouldHandleBattleTap(event)) return;
         window.GameBattle.onTapEnemy();
       });
@@ -428,6 +536,10 @@
       (event) => event.preventDefault(),
       { passive: false },
     );
+    window.addEventListener("blur", stopHoldAttack);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stopHoldAttack();
+    });
     ui.els.challengeBossBtn.addEventListener(
       "click",
       window.GameEnemies.startBossBattle,

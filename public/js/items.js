@@ -245,7 +245,10 @@
       MAX_ITEM_DROP_CHANCE,
       BASE_ITEM_DROP_CHANCE +
         getEquippedOptionTotal("itemDropRatePercent") +
-        getTreasureItemDropRateBonus(),
+        getTreasureItemDropRateBonus() +
+        (window.GameAllies?.getItemDropRateBonus
+          ? window.GameAllies.getItemDropRateBonus()
+          : 0),
     );
   }
 

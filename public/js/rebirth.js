@@ -5,6 +5,7 @@
   const REBIRTH_FLOOR_INTERVAL = 50;
   const NEXT_UNLOCK_TREASURE_CHANCE = 0.01;
   const NEXT_UNLOCK_TREASURE_FLOOR_INTERVAL = 100;
+  const ALLY_JOB_ATTACK_BONUS_JOB_IDS = ["warrior", "swordsman", "hunter"];
   const treasureDefinitionMap = new Map(
     treasureDefinitions.map((treasure) => [treasure.id, treasure]),
   );
@@ -82,13 +83,25 @@
     return Math.max(0, (Number(state.floor) || 1) - 1);
   }
 
-  function getRebirthRewardCount() {
+  function getAllyTreasureRewardBonusCount() {
+    return window.GameAllies?.getTreasureRewardBonusCount
+      ? window.GameAllies.getTreasureRewardBonusCount()
+      : 0;
+  }
+
+  function getBaseRebirthRewardCount() {
     const tierCount = Math.floor(getReachFloor() / REBIRTH_FLOOR_INTERVAL);
     return (tierCount * (tierCount + 1)) / 2;
   }
 
+  function getRebirthRewardCount() {
+    const baseRewardCount = getBaseRebirthRewardCount();
+    if (baseRewardCount <= 0) return 0;
+    return baseRewardCount + getAllyTreasureRewardBonusCount();
+  }
+
   function canRebirth() {
-    return getRebirthRewardCount() > 0;
+    return getBaseRebirthRewardCount() > 0;
   }
 
   function getTreasureCount(treasureId) {
@@ -126,11 +139,12 @@
     const entries = [];
     const ownedEntries = [];
     let playerAttackBonus = 0;
-    let allyAttackBonus = 0;
+    const allyJobAttackBonuses = Object.fromEntries(
+      ALLY_JOB_ATTACK_BONUS_JOB_IDS.map((jobId) => [jobId, 0]),
+    );
     let allyAttackIntervalReductionSeconds = 0;
     let goldBonus = 0;
     let playerUpgradeCostReduction = 0;
-    let allyUpgradeCostReduction = 0;
     let critChanceBonus = 0;
     let critDamageBonus = 0;
     let tapAllyAttackChanceBonus = 0;
@@ -149,15 +163,17 @@
     for (const treasure of treasureDefinitions) {
       const count = Math.max(0, Number(treasures[treasure.id]) || 0);
       const totalAttackBonus = count * (Number(treasure.attackBonus) || 0);
-      const totalAllyAttackBonus =
-        count * (Number(treasure.allyAttackBonus) || 0);
+      const totalAllyJobAttackBonus = Object.fromEntries(
+        ALLY_JOB_ATTACK_BONUS_JOB_IDS.map((jobId) => [
+          jobId,
+          count * (Number(treasure.allyJobAttackBonus?.[jobId]) || 0),
+        ]),
+      );
       const totalAllyAttackIntervalReductionSeconds =
         count * (Number(treasure.allyAttackIntervalReductionSeconds) || 0);
       const totalGoldBonus = count * (Number(treasure.goldBonus) || 0);
       const totalPlayerUpgradeCostReduction =
         count * (Number(treasure.playerUpgradeCostReduction) || 0);
-      const totalAllyUpgradeCostReduction =
-        count * (Number(treasure.allyUpgradeCostReduction) || 0);
       const totalCritChanceBonus =
         count * (Number(treasure.critChanceBonus) || 0);
       const totalCritDamageBonus =
@@ -190,11 +206,10 @@
         ...treasure,
         count,
         totalAttackBonus,
-        totalAllyAttackBonus,
+        totalAllyJobAttackBonus,
         totalAllyAttackIntervalReductionSeconds,
         totalGoldBonus,
         totalPlayerUpgradeCostReduction,
-        totalAllyUpgradeCostReduction,
         totalCritChanceBonus,
         totalCritDamageBonus,
         totalTapAllyAttackChanceBonus,
@@ -214,12 +229,13 @@
       entries.push(entry);
       if (count > 0) ownedEntries.push(entry);
       playerAttackBonus += totalAttackBonus;
-      allyAttackBonus += totalAllyAttackBonus;
+      for (const jobId of ALLY_JOB_ATTACK_BONUS_JOB_IDS) {
+        allyJobAttackBonuses[jobId] += totalAllyJobAttackBonus[jobId];
+      }
       allyAttackIntervalReductionSeconds +=
         totalAllyAttackIntervalReductionSeconds;
       goldBonus += totalGoldBonus;
       playerUpgradeCostReduction += totalPlayerUpgradeCostReduction;
-      allyUpgradeCostReduction += totalAllyUpgradeCostReduction;
       critChanceBonus += totalCritChanceBonus;
       critDamageBonus += totalCritDamageBonus;
       tapAllyAttackChanceBonus += totalTapAllyAttackChanceBonus;
@@ -240,11 +256,10 @@
       entries,
       ownedEntries,
       playerAttackBonus,
-      allyAttackBonus,
+      allyJobAttackBonuses,
       allyAttackIntervalReductionSeconds,
       goldBonus,
       playerUpgradeCostReduction,
-      allyUpgradeCostReduction,
       critChanceBonus,
       critDamageBonus,
       tapAllyAttackChanceBonus,
@@ -279,8 +294,16 @@
     return getTreasureSummary().playerAttackBonus;
   }
 
-  function getAllyAttackBonus() {
-    return getTreasureSummary().allyAttackBonus;
+  function getAllyJobAttackBonus(jobId) {
+    if (!ALLY_JOB_ATTACK_BONUS_JOB_IDS.includes(jobId)) return 0;
+    return Math.max(
+      0,
+      Math.floor(Number(getTreasureSummary().allyJobAttackBonuses[jobId]) || 0),
+    );
+  }
+
+  function getAllyJobAttackBonuses() {
+    return { ...getTreasureSummary().allyJobAttackBonuses };
   }
 
   function getGoldBonus() {
@@ -293,10 +316,6 @@
 
   function getPlayerUpgradeCostReduction() {
     return getTreasureSummary().playerUpgradeCostReduction;
-  }
-
-  function getAllyUpgradeCostReduction() {
-    return getTreasureSummary().allyUpgradeCostReduction;
   }
 
   function getCritChanceBonus() {
@@ -649,6 +668,7 @@
   function rebirth() {
     const rewardCount = getRebirthRewardCount();
     if (rewardCount <= 0) return false;
+    const allyTreasureRewardBonus = getAllyTreasureRewardBonusCount();
     const extraRewardCount = rollExtraTreasureRewardCount();
     const consumedEntries = consumeNextRebirthTreasureEffects();
     const guaranteedExtraRewardCount = consumedEntries.reduce(
@@ -669,6 +689,9 @@
     window.GameEnemies.spawnEnemy();
 
     const rewardNotes = [];
+    if (allyTreasureRewardBonus > 0) {
+      rewardNotes.push(`盗賊効果で秘宝${allyTreasureRewardBonus}個が増え`);
+    }
     if (guaranteedExtraRewardCount > 0) {
       rewardNotes.push(
         `秘宝庫の鍵で追加秘宝${guaranteedExtraRewardCount}個が確定し`,
@@ -708,11 +731,11 @@
     getTreasureEntries,
     getOwnedTreasureEntries,
     getPlayerAttackBonus,
-    getAllyAttackBonus,
+    getAllyJobAttackBonus,
+    getAllyJobAttackBonuses,
     getAllyAttackIntervalReductionSeconds,
     getGoldBonus,
     getPlayerUpgradeCostReduction,
-    getAllyUpgradeCostReduction,
     getCritChanceBonus,
     getCritDamageBonus,
     getTapAllyAttackChanceBonus,

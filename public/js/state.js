@@ -19,6 +19,7 @@ window.GameState = {
   recentAutoDamage: 0,
   recentAutoWindowStart: performance.now(),
   nextItemId: 1,
+  nextAllyId: 1,
   itemSettings: {
     autoDiscardRarity: "none",
     autoDiscardAttackPercent: 0,

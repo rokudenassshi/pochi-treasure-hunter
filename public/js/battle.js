@@ -121,7 +121,12 @@
   }
 
   function getGoldGainPercent() {
-    return getEquippedOptionTotal("goldGainPercent");
+    return (
+      getEquippedOptionTotal("goldGainPercent") +
+      (window.GameAllies?.getGoldGainPercent
+        ? window.GameAllies.getGoldGainPercent()
+        : 0)
+    );
   }
 
   function getTapAllyAttackChance() {
@@ -282,6 +287,10 @@
       "tap",
       superCrit,
     );
+
+    if (state.enemy === tappedEnemy && state.enemy.hp > 0) {
+      window.GameAllies.triggerTapPursuits(tapDamage);
+    }
 
     if (
       state.enemy === tappedEnemy &&

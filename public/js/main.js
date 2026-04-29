@@ -90,6 +90,15 @@
     state.nextItemId = Math.max(1, maxId + 1, Number(state.nextItemId) || 1);
   }
 
+  function refreshNextAllyId() {
+    const maxId = (Array.isArray(state.alliesOwned) ? state.alliesOwned : [])
+      .reduce((currentMax, ally) => {
+        const match = String(ally?.uid || "").match(/^ally-(\d+)$/);
+        return Math.max(currentMax, match ? Number(match[1]) || 0 : 0);
+      }, 0);
+    state.nextAllyId = Math.max(1, maxId + 1, Number(state.nextAllyId) || 1);
+  }
+
   function getDefaultTreasures() {
     return Object.fromEntries(
       (window.GameConfig?.treasureDefinitions || []).map((treasure) => [
@@ -118,18 +127,39 @@
         template,
       ]),
     );
+    const legacyJobIds = ["warrior", "swordsman", "hunter", "merchant", "fighter"];
+
+    function getLegacyJobId(allyId) {
+      const match = String(allyId || "").match(/^ally(\d+)$/);
+      if (!match) return "warrior";
+      const legacyIndex = Math.max(0, (Number(match[1]) || 1) - 1);
+      return legacyJobIds[legacyIndex % legacyJobIds.length] || "warrior";
+    }
 
     return allies
-      .map((ally) => {
-        const template = templateMap.get(ally?.id);
+      .slice(0, window.GameAllies?.MAX_ALLIES || 5)
+      .map((ally, index) => {
+        const jobId = templateMap.has(ally?.jobId || ally?.id)
+          ? ally?.jobId || ally?.id
+          : getLegacyJobId(ally?.id);
+        const template = templateMap.get(jobId);
         if (!template) return null;
+        const legacyPartyLevel = Math.max(1, Number(state.partyLevel) || 1);
 
         return {
           ...template,
           ...ally,
+          id: template.id,
+          uid: ally?.uid || `ally-${index + 1}`,
+          jobId: template.id,
           name: String(template.name),
-          baseAtk: Math.max(1, Number(template.baseAtk) || 1),
-          atkSpeed: Number(template.atkSpeed) || 0.1,
+          level: Math.max(1, Math.floor(Number(ally?.level) || legacyPartyLevel)),
+          baseAtk: Math.max(0, Number(template.baseAtk) || 0),
+          attackIntervalSeconds: Math.max(
+            0,
+            Number(template.attackIntervalSeconds) || 0,
+          ),
+          upgradeAtkAmount: Math.max(0, Number(template.upgradeAtkAmount) || 0),
           upgradeBase: Math.max(0, Number(template.upgradeBase) || 0),
         };
       })
@@ -159,6 +189,7 @@
       state.alliesOwned = normalizeOwnedAllies(
         Array.isArray(parsed.alliesOwned) ? parsed.alliesOwned : [],
       );
+      refreshNextAllyId();
       state.partyLevel = Math.max(1, Number(parsed.partyLevel) || 1);
       state.itemSettings = {
         autoDiscardRarity: "none",
@@ -436,7 +467,7 @@
 
       const actionSelector = [
         "[data-hire]",
-        "[data-upgrade-party]",
+        "[data-upgrade-ally]",
         "[data-item-tab]",
         "[data-equip-inventory-tab]",
         "[data-record-tab]",
@@ -458,8 +489,8 @@
         return;
       }
 
-      if (target.dataset.upgradeParty) {
-        window.GameAllies.upgradePartyLevel();
+      if (target.dataset.upgradeAlly) {
+        window.GameAllies.upgradeAlly(target.dataset.upgradeAlly);
         return;
       }
 

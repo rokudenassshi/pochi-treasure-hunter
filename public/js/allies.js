@@ -2,17 +2,17 @@
   const state = window.GameState;
   const { allyTemplates } = window.GameConfig;
   const MIN_ALLY_ATTACK_INTERVAL_SECONDS = 1;
-  const PARTY_UPGRADE_COST_SCALE = 1.24;
-  const PARTY_ATTACK_UPGRADE_AMOUNT = 1;
-  const PARTY_UPGRADE_BASE_COST = (() => {
-    const definedCosts = allyTemplates
-      .map((template) => Math.max(0, Number(template?.upgradeBase) || 0))
-      .filter((cost) => cost > 0);
-    return definedCosts.length > 0 ? Math.min(...definedCosts) : 60;
-  })();
+  const MAX_ALLIES = 5;
+  const HIRE_COSTS = [1000, 3000, 5000, 10000, 20000];
+  const ALLY_UPGRADE_COST_SCALE = 1.3;
+  const templateMap = new Map(allyTemplates.map((template) => [template.id, template]));
 
-  function getOwnedAlly(id) {
-    return state.alliesOwned.find((ally) => ally.id === id) || null;
+  function getAllyTemplate(jobId) {
+    return templateMap.get(jobId) || null;
+  }
+
+  function getOwnedAlly(uid) {
+    return state.alliesOwned.find((ally) => ally.uid === uid || ally.id === uid) || null;
   }
 
   function getActiveAllies() {
@@ -29,68 +29,66 @@
     return Math.max(0, state.player.compass?.allyAttackPercent || 0);
   }
 
-  function getTreasureAllyAttackBonus() {
-    return window.GameRebirth?.getAllyAttackBonus
-      ? window.GameRebirth.getAllyAttackBonus()
-      : 0;
-  }
-
   function getTreasureAllyAttackIntervalReductionSeconds() {
     return window.GameRebirth?.getAllyAttackIntervalReductionSeconds
       ? window.GameRebirth.getAllyAttackIntervalReductionSeconds()
       : 0;
   }
 
-  function getTreasureAllyUpgradeCostReduction() {
-    return window.GameRebirth?.getAllyUpgradeCostReduction
-      ? window.GameRebirth.getAllyUpgradeCostReduction()
+  function getTreasureAllyJobAttackBonus(jobId) {
+    return window.GameRebirth?.getAllyJobAttackBonus
+      ? window.GameRebirth.getAllyJobAttackBonus(jobId)
       : 0;
   }
 
-  function getPartyLevel() {
-    return Math.max(1, Number(state.partyLevel) || 1);
+  function getNextHireCost() {
+    return HIRE_COSTS[state.alliesOwned.length] || null;
   }
 
-  function getPartyAttackBonus() {
-    return Math.max(
-      0,
-      (getPartyLevel() - 1) * PARTY_ATTACK_UPGRADE_AMOUNT,
-    );
+  function canHireAlly() {
+    const cost = getNextHireCost();
+    return state.alliesOwned.length < MAX_ALLIES && cost !== null;
   }
 
-  function getPartyUpgradeBaseCost() {
-    return PARTY_UPGRADE_BASE_COST;
+  function getNextAllyUid() {
+    const nextId = Math.max(1, Math.floor(Number(state.nextAllyId) || 1));
+    state.nextAllyId = nextId + 1;
+    return `ally-${nextId}`;
   }
 
-  function getPartyUpgradeCost() {
-    const baseCost = getPartyUpgradeBaseCost();
-    if (baseCost <= 0) return 0;
+  function getAllyLevel(ally) {
+    return Math.max(1, Math.floor(Number(ally?.level) || 1));
+  }
 
+  function getAllyUpgradeAttackAmount(ally) {
+    return Math.max(0, Math.floor(Number(ally?.upgradeAtkAmount) || 0));
+  }
+
+  function canUpgradeAlly(ally) {
+    if (!ally || ally.canUpgrade === false) return false;
+    return getAllyUpgradeAttackAmount(ally) > 0;
+  }
+
+  function getAllyUpgradeCost(ally) {
+    if (!canUpgradeAlly(ally)) return null;
+    const baseCost = Math.max(1, Math.floor(Number(ally.upgradeBase) || 1));
     return Math.max(
       1,
-      Math.floor(
-        baseCost * Math.pow(PARTY_UPGRADE_COST_SCALE, getPartyLevel() - 1),
-      ) - getTreasureAllyUpgradeCostReduction(),
+      Math.floor(baseCost * Math.pow(ALLY_UPGRADE_COST_SCALE, getAllyLevel(ally) - 1)),
     );
   }
 
-  function canUpgradePartyLevel() {
-    return getActiveAllies().length > 0;
+  function getAllyRawAttack(ally) {
+    const baseAtk = Math.max(0, Math.floor(Number(ally?.baseAtk) || 0));
+    return (
+      baseAtk +
+      getTreasureAllyJobAttackBonus(ally?.jobId || ally?.id) +
+      (getAllyLevel(ally) - 1) * getAllyUpgradeAttackAmount(ally)
+    );
   }
 
-  function getAllyAttackIntervalSeconds(ally) {
-    const atkSpeed = Number(ally?.atkSpeed) || 0.1;
-    const baseInterval = 1 / atkSpeed;
-    const reducedInterval =
-      baseInterval - getTreasureAllyAttackIntervalReductionSeconds();
-    return Math.max(MIN_ALLY_ATTACK_INTERVAL_SECONDS, reducedInterval);
-  }
-
-  function getAllyAttack(ally) {
-    const base =
-      Math.max(1, Number(ally?.baseAtk) || 1) +
-      getPartyAttackBonus() +
-      getTreasureAllyAttackBonus();
+  function applyAllyDamageBonus(base) {
+    if (base <= 0) return 0;
     const totalPercent =
       getCompassAttackPercent() + getEquippedOptionTotal("allyDamagePercent");
     let damage = Math.floor(base * (1 + totalPercent));
@@ -98,58 +96,104 @@
     return Math.max(1, damage);
   }
 
+  function getAllyAttackIntervalSeconds(ally) {
+    const attackIntervalSeconds = Number(ally?.attackIntervalSeconds) || 0;
+    if (attackIntervalSeconds <= 0) return 0;
+    const reducedInterval =
+      attackIntervalSeconds - getTreasureAllyAttackIntervalReductionSeconds();
+    return Math.max(MIN_ALLY_ATTACK_INTERVAL_SECONDS, reducedInterval);
+  }
+
+  function canAutoAttack(ally) {
+    return !ally?.tapPursuitRatio && getAllyAttackIntervalSeconds(ally) > 0;
+  }
+
+  function getAllyAttack(ally) {
+    if (!canAutoAttack(ally)) return 0;
+    return applyAllyDamageBonus(getAllyRawAttack(ally));
+  }
+
+  function getAllyTapPursuitAttack(ally, tapDamage = 0) {
+    const ratio = Math.max(0, Number(ally?.tapPursuitRatio) || 0);
+    if (ratio <= 0) return 0;
+    const tapPursuitBase = Math.max(
+      1,
+      Math.floor(Math.max(0, Number(tapDamage) || 0) * ratio),
+    );
+    const base =
+      tapPursuitBase +
+      (getAllyLevel(ally) - 1) * getAllyUpgradeAttackAmount(ally);
+    return applyAllyDamageBonus(base);
+  }
+
   function performAllyAttack(ally) {
     if (!state.enemy || !ally) return false;
-    window.GameBattle.damageEnemy(getAllyAttack(ally), false, "ally");
+    const attack = getAllyAttack(ally);
+    if (attack <= 0) return false;
+    window.GameBattle.damageEnemy(attack, false, "ally");
     return true;
   }
 
   function hireAlly(template) {
-    if (
-      state.alliesOwned.length >= 10 ||
-      getOwnedAlly(template.id) ||
-      state.gold < template.hireCost
-    ) {
-      return;
+    const cost = getNextHireCost();
+    if (!template || !canHireAlly() || cost === null || state.gold < cost) {
+      return false;
     }
 
-    state.gold -= template.hireCost;
+    state.gold -= cost;
     state.alliesOwned.push({
       ...template,
-      baseAtk: Math.max(1, Number(template.baseAtk) || 1),
+      uid: getNextAllyUid(),
+      jobId: template.id,
+      level: 1,
       lastAttackAt: performance.now(),
     });
     window.GameUI.addLog(`${template.name} を雇用した。`);
     window.GameUI.render();
     window.GameSave.save();
+    return true;
   }
 
-  function upgradePartyLevel() {
-    if (!canUpgradePartyLevel()) return false;
+  function upgradeAlly(uid) {
+    const ally = getOwnedAlly(uid);
+    if (!canUpgradeAlly(ally)) return false;
 
-    const cost = getPartyUpgradeCost();
-    if (state.gold < cost) return false;
+    const cost = getAllyUpgradeCost(ally);
+    if (cost === null || state.gold < cost) return false;
 
     state.gold -= cost;
-    state.partyLevel = getPartyLevel() + 1;
-    window.GameUI.addLog(
-      `パーティーレベルが Lv.${getPartyLevel()} になった。`,
-    );
+    ally.level = getAllyLevel(ally) + 1;
+    window.GameUI.addLog(`${ally.name} が Lv.${ally.level} になった。`);
     window.GameUI.render();
     window.GameSave.save();
     return true;
   }
 
-  function getPartyUpgradeAmount() {
-    return PARTY_ATTACK_UPGRADE_AMOUNT;
-  }
-
   function triggerTapAllyAttack() {
     if (!state.enemy) return false;
-    const activeAllies = getActiveAllies();
+    const activeAllies = getActiveAllies().filter((ally) => getAllyAttack(ally) > 0);
     if (activeAllies.length === 0) return false;
     const ally = activeAllies[Math.floor(Math.random() * activeAllies.length)];
     return performAllyAttack(ally);
+  }
+
+  function triggerTapPursuits(tapDamage) {
+    if (!state.enemy) return false;
+    const targetEnemy = state.enemy;
+    let triggered = false;
+
+    for (const ally of getActiveAllies()) {
+      if (!state.enemy || state.enemy !== targetEnemy || targetEnemy.hp <= 0) {
+        break;
+      }
+
+      const attack = getAllyTapPursuitAttack(ally, tapDamage);
+      if (attack <= 0) continue;
+      window.GameBattle.damageEnemy(attack, false, "ally");
+      triggered = true;
+    }
+
+    return triggered;
   }
 
   function autoAttack(now) {
@@ -160,6 +204,7 @@
       if (!state.enemy || state.enemy !== targetEnemy || targetEnemy.hp <= 0) {
         break;
       }
+      if (!canAutoAttack(ally) || getAllyAttack(ally) <= 0) continue;
 
       if (typeof ally.lastAttackAt !== "number") ally.lastAttackAt = now;
       const interval = getAllyAttackIntervalSeconds(ally) * 1000;
@@ -170,20 +215,50 @@
     }
   }
 
+  function getTreasureRewardBonusCount() {
+    return getActiveAllies().reduce(
+      (total, ally) => total + Math.max(0, Math.floor(Number(ally.treasureRewardBonusCount) || 0)),
+      0,
+    );
+  }
+
+  function getItemDropRateBonus() {
+    return getActiveAllies().reduce(
+      (total, ally) => total + Math.max(0, Number(ally.itemDropRateBonus) || 0),
+      0,
+    );
+  }
+
+  function getGoldGainPercent() {
+    return getActiveAllies().reduce(
+      (total, ally) => total + Math.max(0, Number(ally.goldGainPercent) || 0),
+      0,
+    );
+  }
+
   window.GameAllies = {
     allyTemplates,
+    MAX_ALLIES,
+    getAllyTemplate,
     getOwnedAlly,
     getActiveAllies,
-    getPartyLevel,
-    getPartyAttackBonus,
-    getPartyUpgradeCost,
-    getPartyUpgradeAmount,
-    canUpgradePartyLevel,
+    getNextHireCost,
+    canHireAlly,
+    getAllyLevel,
+    canUpgradeAlly,
+    getAllyUpgradeCost,
+    getAllyUpgradeAttackAmount,
+    getAllyRawAttack,
     getAllyAttack,
+    getAllyTapPursuitAttack,
     getAllyAttackIntervalSeconds,
     hireAlly,
-    upgradePartyLevel,
+    upgradeAlly,
     triggerTapAllyAttack,
+    triggerTapPursuits,
+    getTreasureRewardBonusCount,
+    getItemDropRateBonus,
+    getGoldGainPercent,
     autoAttack,
   };
 })();

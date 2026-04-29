@@ -170,6 +170,9 @@
     const rebirthStartingGoldBonus = window.GameRebirth?.getRebirthStartingGoldBonus
       ? window.GameRebirth.getRebirthStartingGoldBonus()
       : 0;
+    const allyTreasureRewardBonus = window.GameAllies?.getTreasureRewardBonusCount
+      ? window.GameAllies.getTreasureRewardBonusCount()
+      : 0;
     const reachFloor = window.GameRebirth?.getReachFloor
       ? window.GameRebirth.getReachFloor()
       : Math.max(0, (Number(state.floor) || 1) - 1);
@@ -190,7 +193,7 @@
     els.maxCritBtn.disabled = state.gold < costs.crit;
     els.maxCritDmgBtn.disabled = state.gold < costs.critDamage;
     els.rebirthDescriptionText.textContent =
-      `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに加算量 +1ずつ増加 / 今回 ${formatNumber(rewardCount)}個${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
+      `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに加算量 +1ずつ増加 / 今回 ${formatNumber(rewardCount)}個${allyTreasureRewardBonus > 0 ? ` / 盗賊 +${formatNumber(allyTreasureRewardBonus)}個` : ""}${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
     els.rebirthBtn.disabled = rewardCount <= 0;
   }
 
@@ -201,55 +204,79 @@
   function renderParty() {
     const {
       allyTemplates,
-      getOwnedAlly,
+      MAX_ALLIES,
+      getActiveAllies,
+      getNextHireCost,
+      canHireAlly,
       getAllyAttack,
+      getAllyTapPursuitAttack,
       getAllyAttackIntervalSeconds,
-      getPartyLevel,
-      getPartyAttackBonus,
-      getPartyUpgradeCost,
-      getPartyUpgradeAmount,
-      canUpgradePartyLevel,
+      getAllyUpgradeCost,
+      getAllyUpgradeAttackAmount,
+      canUpgradeAlly,
     } = window.GameAllies;
-    const partyLevel = getPartyLevel();
-    const partyAttackBonus = formatNumber(getPartyAttackBonus());
-    const partyUpgradeCost = getPartyUpgradeCost();
-    const partyUpgradeAmount = formatNumber(getPartyUpgradeAmount());
-    const canUpgradeParty = canUpgradePartyLevel();
+    const activeAllies = getActiveAllies();
+    const nextHireCost = getNextHireCost();
+    const canHire = canHireAlly();
+    const tapDamage = window.GameBattle.calcTapDamage();
 
     function allySummary(ally) {
+      const lines = [];
       const interval = formatSeconds(getAllyAttackIntervalSeconds(ally));
-      return `攻撃 ${formatNumber(getAllyAttack(ally))} / ${interval}秒ごとに攻撃`;
+      const attack = getAllyAttack(ally);
+      const pursuitAttack = getAllyTapPursuitAttack(ally, tapDamage);
+      if (attack > 0) {
+        lines.push(`攻撃 ${formatNumber(attack)} / ${interval}秒ごと`);
+      }
+      if (pursuitAttack > 0) {
+        lines.push(`タップ追撃 ${formatNumber(pursuitAttack)}`);
+      }
+      if (ally.treasureRewardBonusCount > 0) {
+        lines.push(`秘宝 +${formatNumber(ally.treasureRewardBonusCount)}個`);
+      }
+      if (ally.itemDropRateBonus > 0) {
+        lines.push(`装備ドロップ率 +${formatPercent(ally.itemDropRateBonus, 0)}%`);
+      }
+      if (ally.goldGainPercent > 0) {
+        lines.push(`獲得ゴールド +${formatPercent(ally.goldGainPercent, 0)}%`);
+      }
+      return lines.join(" / ") || "特殊効果なし";
     }
 
     const partyCard = `
       <div class="row-card">
         <div class="row-top">
           <div>
-            <div class="item-name">パーティーレベル Lv.${partyLevel}</div>
-            <div class="small">仲間全体の攻撃力 +${partyAttackBonus}</div>
+            <div class="item-name">仲間 ${formatNumber(activeAllies.length)} / ${formatNumber(MAX_ALLIES)}</div>
+            <div class="small">${canHire ? `次の雇用 ${formatNumber(nextHireCost)}G` : "これ以上雇用できません"}</div>
           </div>
-        </div>
-        <div class="actions">
-          <button class="btn primary" data-upgrade-party="1" ${!canUpgradeParty || state.gold < partyUpgradeCost ? "disabled" : ""}>全員攻撃 +${partyUpgradeAmount} / ${canUpgradeParty ? `${formatNumber(partyUpgradeCost)}G` : "--"}</button>
         </div>
       </div>
     `;
 
-    const allyCards = allyTemplates
+    const hireCards = allyTemplates
       .map((template) => {
-        const ally = getOwnedAlly(template.id);
-        if (!ally) {
-          const interval = formatSeconds(
-            getAllyAttackIntervalSeconds(template),
-          );
-          return `<div class="row-card"><div class="row-top"><div><div class="item-name">${template.name}</div><div class="small">攻撃 ${template.baseAtk} / ${interval}秒ごとに攻撃</div></div><div class="small">雇用 ${formatNumber(template.hireCost)}G</div></div><div class="actions"><button class="btn good" data-hire="${template.id}" ${state.gold < template.hireCost || state.alliesOwned.length >= 10 ? "disabled" : ""}>雇用</button></div></div>`;
-        }
-
-        return `<div class="row-card"><div class="row-top"><div><span class="item-name">${ally.name}</span><div class="small">${allySummary(ally)}</div></div></div></div>`;
+        const disabled = !canHire || state.gold < nextHireCost;
+        return `<div class="row-card"><div class="row-top"><div><div class="item-name">${template.name}</div><div class="small">${template.description}</div><div class="small">${allySummary(template)}</div></div><div class="small">${canHire ? `${formatNumber(nextHireCost)}G` : "--"}</div></div><div class="actions"><button class="btn good" data-hire="${template.id}" ${disabled ? "disabled" : ""}>雇用</button></div></div>`;
       })
       .join("");
 
-    els.allyList.innerHTML = `${partyCard}${allyCards}`;
+    const ownedCards = activeAllies
+      .map((ally, index) => {
+        const upgradeCost = getAllyUpgradeCost(ally);
+        const upgradeAmount = getAllyUpgradeAttackAmount(ally);
+        const upgradeDisabled = upgradeCost === null || state.gold < upgradeCost;
+        const upgradeButton = canUpgradeAlly(ally)
+          ? `<button class="btn primary" data-upgrade-ally="${ally.uid}" ${upgradeDisabled ? "disabled" : ""}>攻撃 +${formatNumber(upgradeAmount)} / ${formatNumber(upgradeCost)}G</button>`
+          : '<button class="btn" disabled>強化不可</button>';
+        return `<div class="row-card"><div class="row-top"><div><span class="item-name">${formatNumber(index + 1)}. ${ally.name} Lv.${formatNumber(ally.level || 1)}</span><div class="small">${allySummary(ally)}</div></div></div><div class="actions">${upgradeButton}</div></div>`;
+      })
+      .join("");
+    const ownedList =
+      ownedCards ||
+      '<div class="row-card"><div class="small">まだ仲間を雇用していません。</div></div>';
+
+    els.allyList.innerHTML = `${partyCard}<div class="section-title">雇用する職業</div>${hireCards}<div class="section-title">雇用中の仲間</div>${ownedList}`;
   }
 
   function renderInventoryActions(item, isLocked, lockBtnClass, lockBtnText) {
@@ -434,14 +461,12 @@
     if (!window.GameRebirth) return;
 
     const playerAttackBonus = window.GameRebirth.getPlayerAttackBonus();
-    const allyAttackBonus = window.GameRebirth.getAllyAttackBonus();
+    const allyJobAttackBonuses = window.GameRebirth.getAllyJobAttackBonuses();
     const allyAttackIntervalReductionSeconds =
       window.GameRebirth.getAllyAttackIntervalReductionSeconds();
     const goldBonus = window.GameRebirth.getGoldBonus();
     const playerUpgradeCostReduction =
       window.GameRebirth.getPlayerUpgradeCostReduction();
-    const allyUpgradeCostReduction =
-      window.GameRebirth.getAllyUpgradeCostReduction();
     const critChanceBonus = window.GameRebirth.getCritChanceBonus();
     const critDamageBonus = window.GameRebirth.getCritDamageBonus();
     const tapAllyAttackChanceBonus =
@@ -461,17 +486,26 @@
       window.GameRebirth.getBossTreasureRewardFloorOffset();
     const bossDamagePercent = window.GameRebirth.getBossDamagePercent();
     const ownedTreasures = window.GameRebirth.getOwnedTreasureEntries();
+
+    function formatAllyJobAttackBonusLines(bonuses, prefix = "") {
+      return Object.entries(bonuses || {})
+        .filter(([, bonus]) => bonus > 0)
+        .map(([jobId, bonus]) => {
+          const jobName =
+            window.GameAllies?.getAllyTemplate?.(jobId)?.name || jobId;
+          return `${prefix}${jobName}攻撃力 +${formatNumber(bonus)}`;
+        });
+    }
+
     const treasureEffectSummary = [];
     if (playerAttackBonus > 0) {
       treasureEffectSummary.push(
         `プレイヤー攻撃力 +${formatNumber(playerAttackBonus)}`,
       );
     }
-    if (allyAttackBonus > 0) {
-      treasureEffectSummary.push(
-        `仲間攻撃力 +${formatNumber(allyAttackBonus)}`,
-      );
-    }
+    treasureEffectSummary.push(
+      ...formatAllyJobAttackBonusLines(allyJobAttackBonuses),
+    );
     if (allyAttackIntervalReductionSeconds > 0) {
       treasureEffectSummary.push(
         `仲間攻撃間隔: -${formatSeconds(allyAttackIntervalReductionSeconds)}秒`,
@@ -483,11 +517,6 @@
     if (playerUpgradeCostReduction > 0) {
       treasureEffectSummary.push(
         `プレイヤー強化費用 -${formatNumber(playerUpgradeCostReduction)}`,
-      );
-    }
-    if (allyUpgradeCostReduction > 0) {
-      treasureEffectSummary.push(
-        `仲間強化費用 -${formatNumber(allyUpgradeCostReduction)}`,
       );
     }
     if (critChanceBonus > 0) {
@@ -561,11 +590,12 @@
         if (treasure.totalAttackBonus) {
           effectLines.push(`合計攻撃力 +${formatNumber(treasure.totalAttackBonus)}`);
         }
-        if (treasure.totalAllyAttackBonus) {
-          effectLines.push(
-            `合計仲間攻撃力 +${formatNumber(treasure.totalAllyAttackBonus)}`,
-          );
-        }
+        effectLines.push(
+          ...formatAllyJobAttackBonusLines(
+            treasure.totalAllyJobAttackBonus,
+            "合計",
+          ),
+        );
         if (treasure.totalAllyAttackIntervalReductionSeconds) {
           effectLines.push(
             `仲間攻撃間隔: -${formatSeconds(treasure.totalAllyAttackIntervalReductionSeconds)}秒`,
@@ -577,11 +607,6 @@
         if (treasure.totalPlayerUpgradeCostReduction) {
           effectLines.push(
             `合計プレイヤー強化費用 -${formatNumber(treasure.totalPlayerUpgradeCostReduction)}`,
-          );
-        }
-        if (treasure.totalAllyUpgradeCostReduction) {
-          effectLines.push(
-            `合計仲間強化費用 -${formatNumber(treasure.totalAllyUpgradeCostReduction)}`,
           );
         }
         if (treasure.totalCritChanceBonus) {
@@ -682,13 +707,19 @@
     const itemDropBonus = window.GameItems.getEquippedOptionTotal(
       "itemDropRatePercent",
     );
+    const allyGoldGainPercent = window.GameAllies?.getGoldGainPercent
+      ? window.GameAllies.getGoldGainPercent()
+      : 0;
+    const allyItemDropRateBonus = window.GameAllies?.getItemDropRateBonus
+      ? window.GameAllies.getItemDropRateBonus()
+      : 0;
+    const allyTreasureRewardBonus = window.GameAllies?.getTreasureRewardBonusCount
+      ? window.GameAllies.getTreasureRewardBonusCount()
+      : 0;
     const bossTimeLimit = window.GameEnemies.getBossTimeLimit();
     const bossTimeBonus = window.GameEnemies.getBossTimeBonusSeconds();
     const treasureAttackBonus = window.GameRebirth?.getPlayerAttackBonus
       ? window.GameRebirth.getPlayerAttackBonus()
-      : 0;
-    const treasureAllyAttackBonus = window.GameRebirth?.getAllyAttackBonus
-      ? window.GameRebirth.getAllyAttackBonus()
       : 0;
     const treasureAllyAttackIntervalReductionSeconds =
       window.GameRebirth?.getAllyAttackIntervalReductionSeconds
@@ -700,10 +731,6 @@
     const treasurePlayerUpgradeCostReduction =
       window.GameRebirth?.getPlayerUpgradeCostReduction
         ? window.GameRebirth.getPlayerUpgradeCostReduction()
-        : 0;
-    const treasureAllyUpgradeCostReduction =
-      window.GameRebirth?.getAllyUpgradeCostReduction
-        ? window.GameRebirth.getAllyUpgradeCostReduction()
         : 0;
     const treasureItemDropRateBonus = window.GameRebirth?.getItemDropRateBonus
       ? window.GameRebirth.getItemDropRateBonus()
@@ -738,12 +765,6 @@
       : 0;
     const gogglesAttack = state.player.goggles?.attackPercent || 0;
     const compassAttack = state.player.compass?.allyAttackPercent || 0;
-    const partyLevel = window.GameAllies?.getPartyLevel
-      ? window.GameAllies.getPartyLevel()
-      : 1;
-    const partyAttackBonus = window.GameAllies?.getPartyAttackBonus
-      ? window.GameAllies.getPartyAttackBonus()
-      : 0;
     const activeAllies = window.GameAllies?.getActiveAllies
       ? window.GameAllies.getActiveAllies()
       : [];
@@ -774,6 +795,9 @@
     if (goldGainPercent > 0) {
       playerLines.push(`ゴールド倍率: +${formatPercent(goldGainPercent, 0)}%`);
     }
+    if (allyGoldGainPercent > 0) {
+      playerLines.push(`商人ゴールド: +${formatPercent(allyGoldGainPercent, 0)}%`);
+    }
     if (treasureGoldBonus > 0) {
       playerLines.push(`秘宝ゴールド +${formatNumber(treasureGoldBonus)}`);
     }
@@ -795,15 +819,6 @@
     if (compassAttack > 0) {
       allyLines.push(`コンパス攻撃力: +${formatPercent(compassAttack, 1)}%`);
     }
-    if (partyLevel > 1) {
-      allyLines.push(`パーティーレベル: Lv.${partyLevel}`);
-    }
-    if (partyAttackBonus > 0) {
-      allyLines.push(`全体攻撃補正: +${formatNumber(partyAttackBonus)}`);
-    }
-    if (treasureAllyAttackBonus > 0) {
-      allyLines.push(`秘宝仲間攻撃力: +${formatNumber(treasureAllyAttackBonus)}`);
-    }
     if (treasureAllyAttackIntervalReductionSeconds > 0) {
       allyLines.push(
         `仲間攻撃間隔: -${formatSeconds(treasureAllyAttackIntervalReductionSeconds)}秒`,
@@ -814,15 +829,12 @@
         `タップ時仲間追撃率: ${formatPercent(tapAllyAttackChance, 1)}%`,
       );
     }
-    if (treasureAllyUpgradeCostReduction > 0) {
-      allyLines.push(
-        `仲間強化費用: -${formatNumber(treasureAllyUpgradeCostReduction)}`,
-      );
-    }
-
     const equipmentLines = [];
-    if (itemDropBonus + treasureItemDropRateBonus > 0) {
+    if (itemDropBonus + treasureItemDropRateBonus + allyItemDropRateBonus > 0) {
       equipmentLines.push(`装備ドロップ率: ${formatPercent(itemDropChance, 1)}%`);
+    }
+    if (allyItemDropRateBonus > 0) {
+      equipmentLines.push(`商人ドロップ率: +${formatPercent(allyItemDropRateBonus, 0)}%`);
     }
     if (treasureDroppedEquipmentAttackBonus > 0) {
       equipmentLines.push(
@@ -868,6 +880,9 @@
       collectionLines.push(
         `ボス撃破秘宝: +${formatNumber(treasureBossTreasureRewardCount)}個`,
       );
+    }
+    if (allyTreasureRewardBonus > 0) {
+      collectionLines.push(`盗賊秘宝: +${formatNumber(allyTreasureRewardBonus)}個`);
     }
 
     if (els.recordVersionText) {

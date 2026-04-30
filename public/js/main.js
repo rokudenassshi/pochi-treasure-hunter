@@ -6,7 +6,16 @@
 
   function saveGame() {
     try {
+      // リリース時にはこちらのコードにするリセット削除
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+
+      localStorage.setItem(
+        SAVE_KEY,
+        JSON.stringify({
+          ...state,
+          saveVersion: window.GameVersion || "dev",
+        }),
+      );
     } catch (error) {
       console.warn("Game save failed", error);
     }
@@ -186,6 +195,11 @@
 
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object") return false;
+
+      if (window.GameSaveReset?.shouldReset?.(parsed)) {
+        localStorage.removeItem(SAVE_KEY);
+        return false;
+      }
 
       Object.assign(state, parsed);
 

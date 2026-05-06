@@ -120,6 +120,21 @@
     );
   }
 
+  function getMultiStrikeChance() {
+    return Math.min(1, getEquippedOptionTotal("multiStrikeChance"));
+  }
+
+  function getAllyRallyChance() {
+    return Math.min(1, getEquippedOptionTotal("allyRallyChance"));
+  }
+
+  function getFloorSkipChance() {
+    return Math.min(
+      1,
+      getTreasureFloorSkipChance() + getEquippedOptionTotal("floorSkipChance"),
+    );
+  }
+
   function getGoldGainPercent() {
     return (
       getEquippedOptionTotal("goldGainPercent") +
@@ -193,7 +208,7 @@
   }
 
   function shouldSkipNextFloor(clearedFloor) {
-    const chance = getTreasureFloorSkipChance();
+    const chance = getFloorSkipChance();
     if (chance <= 0) return false;
     if (!canSkipNextFloor(clearedFloor)) return false;
     return Math.random() < chance;
@@ -271,23 +286,42 @@
   function onTapEnemy() {
     const tappedEnemy = state.enemy;
     const tapDamage = calcTapDamage();
-    const superCrit = Math.random() < calcSuperCritChance();
-    const crit = !superCrit && Math.random() < calcCritChance();
-    const damage = Math.floor(
-      tapDamage *
-        (superCrit
-          ? SUPER_CRIT_MULTIPLIER
-          : crit
-            ? calcCritMultiplier()
-            : 1),
+    const buildTapHit = () => {
+      const superCrit = Math.random() < calcSuperCritChance();
+      const crit = !superCrit && Math.random() < calcCritChance();
+      const damage = Math.floor(
+        tapDamage *
+          (superCrit
+            ? SUPER_CRIT_MULTIPLIER
+            : crit
+              ? calcCritMultiplier()
+              : 1),
+      );
+
+      return { damage, crit, superCrit };
+    };
+
+    const firstHit = buildTapHit();
+    damageEnemy(
+      firstHit.damage,
+      firstHit.crit || firstHit.superCrit,
+      "tap",
+      firstHit.superCrit,
     );
 
-    damageEnemy(
-      damage,
-      crit || superCrit,
-      "tap",
-      superCrit,
-    );
+    if (
+      state.enemy === tappedEnemy &&
+      state.enemy.hp > 0 &&
+      Math.random() < getMultiStrikeChance()
+    ) {
+      const extraHit = buildTapHit();
+      damageEnemy(
+        extraHit.damage,
+        extraHit.crit || extraHit.superCrit,
+        "tap",
+        extraHit.superCrit,
+      );
+    }
 
     if (state.enemy === tappedEnemy && state.enemy.hp > 0) {
       window.GameAllies.triggerTapPursuits(tapDamage);
@@ -299,6 +333,14 @@
       Math.random() < getTapAllyAttackChance()
     ) {
       window.GameAllies.triggerTapAllyAttack();
+    }
+
+    if (
+      state.enemy === tappedEnemy &&
+      state.enemy.hp > 0 &&
+      Math.random() < getAllyRallyChance()
+    ) {
+      window.GameAllies.reduceAllyAttackCooldowns(1);
     }
   }
 
@@ -388,7 +430,10 @@
     calcCritChance,
     calcCritMultiplier,
     calcSuperCritChance,
+    getMultiStrikeChance,
+    getAllyRallyChance,
     getTapAllyAttackChance,
+    getFloorSkipChance,
     getBossDamagePercent,
     getNormalEnemyDamagePercent,
     getGoldGainPercent,

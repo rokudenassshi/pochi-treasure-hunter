@@ -45,6 +45,18 @@
       : 0;
   }
 
+  function getTreasureThiefTreasureRewardBonusCount() {
+    return window.GameRebirth?.getThiefTreasureRewardBonusCount
+      ? window.GameRebirth.getThiefTreasureRewardBonusCount()
+      : 0;
+  }
+
+  function getTreasureFighterTapPursuitRatioBonus() {
+    return window.GameRebirth?.getFighterTapPursuitRatioBonus
+      ? window.GameRebirth.getFighterTapPursuitRatioBonus()
+      : 0;
+  }
+
   function getNextHireCost() {
     return HIRE_COSTS[state.alliesOwned.length] || null;
   }
@@ -120,7 +132,10 @@
   }
 
   function getAllyTapPursuitAttack(ally, tapDamage = 0) {
-    const ratio = Math.max(0, Number(ally?.tapPursuitRatio) || 0);
+    const jobId = ally?.jobId || ally?.id;
+    const ratio =
+      Math.max(0, Number(ally?.tapPursuitRatio) || 0) +
+      (jobId === "fighter" ? getTreasureFighterTapPursuitRatioBonus() : 0);
     if (ratio <= 0) return 0;
     const tapPursuitBase = Math.max(
       1,
@@ -183,6 +198,23 @@
     return performAllyAttack(ally);
   }
 
+  function reduceAllyAttackCooldowns(seconds = 1) {
+    const reductionMs = Math.max(0, Number(seconds) || 0) * 1000;
+    if (reductionMs <= 0) return 0;
+
+    let reducedCount = 0;
+    for (const ally of getActiveAllies()) {
+      if (!canAutoAttack(ally) || getAllyAttack(ally) <= 0) continue;
+      if (typeof ally.lastAttackAt !== "number") {
+        ally.lastAttackAt = performance.now();
+      }
+      ally.lastAttackAt -= reductionMs;
+      reducedCount += 1;
+    }
+
+    return reducedCount;
+  }
+
   function triggerTapPursuits(tapDamage) {
     if (!state.enemy) return false;
     const targetEnemy = state.enemy;
@@ -200,6 +232,17 @@
     }
 
     return triggered;
+  }
+
+  function getAllyTreasureRewardBonusCount(ally) {
+    const baseBonus = Math.max(
+      0,
+      Math.floor(Number(ally?.treasureRewardBonusCount) || 0),
+    );
+    const jobId = ally?.jobId || ally?.id;
+    const thiefBonus =
+      jobId === "thief" ? getTreasureThiefTreasureRewardBonusCount() : 0;
+    return baseBonus + thiefBonus;
   }
 
   function autoAttack(now) {
@@ -223,7 +266,7 @@
 
   function getTreasureRewardBonusCount() {
     return getActiveAllies().reduce(
-      (total, ally) => total + Math.max(0, Math.floor(Number(ally.treasureRewardBonusCount) || 0)),
+      (total, ally) => total + getAllyTreasureRewardBonusCount(ally),
       0,
     );
   }
@@ -257,11 +300,13 @@
     getAllyRawAttack,
     getAllyAttack,
     getAllyTapPursuitAttack,
+    getAllyTreasureRewardBonusCount,
     getAllyAttackIntervalSeconds,
     hireAlly,
     upgradeAlly,
     triggerTapAllyAttack,
     triggerTapPursuits,
+    reduceAllyAttackCooldowns,
     getTreasureRewardBonusCount,
     getItemDropRateBonus,
     getGoldGainPercent,

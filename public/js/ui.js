@@ -213,6 +213,7 @@
       getAllyAttackIntervalSeconds,
       getAllyUpgradeCost,
       getAllyUpgradeAttackAmount,
+      getAllyTreasureRewardBonusCount,
       canUpgradeAlly,
     } = window.GameAllies;
     const activeAllies = getActiveAllies();
@@ -231,8 +232,11 @@
       if (pursuitAttack > 0) {
         lines.push(`タップ追撃 ${formatNumber(pursuitAttack)}`);
       }
-      if (ally.treasureRewardBonusCount > 0) {
-        lines.push(`秘宝 +${formatNumber(ally.treasureRewardBonusCount)}個`);
+      const treasureRewardBonusCount = getAllyTreasureRewardBonusCount
+        ? getAllyTreasureRewardBonusCount(ally)
+        : Math.max(0, Math.floor(Number(ally.treasureRewardBonusCount) || 0));
+      if (treasureRewardBonusCount > 0) {
+        lines.push(`秘宝 +${formatNumber(treasureRewardBonusCount)}個`);
       }
       if (ally.itemDropRateBonus > 0) {
         lines.push(`装備ドロップ率 +${formatPercent(ally.itemDropRateBonus, 0)}%`);
@@ -485,6 +489,10 @@
     const bossTreasureRewardFloorOffset =
       window.GameRebirth.getBossTreasureRewardFloorOffset();
     const bossDamagePercent = window.GameRebirth.getBossDamagePercent();
+    const thiefTreasureRewardBonusCount =
+      window.GameRebirth.getThiefTreasureRewardBonusCount();
+    const fighterTapPursuitRatioBonus =
+      window.GameRebirth.getFighterTapPursuitRatioBonus();
     const ownedTreasures = window.GameRebirth.getOwnedTreasureEntries();
 
     function formatAllyJobAttackBonusLines(bonuses, prefix = "") {
@@ -584,6 +592,16 @@
         `ボスダメージ +${formatPercent(bossDamagePercent, 0)}%`,
       );
     }
+    if (thiefTreasureRewardBonusCount > 0) {
+      treasureEffectSummary.push(
+        `盗賊秘宝 +${formatNumber(thiefTreasureRewardBonusCount)}個`,
+      );
+    }
+    if (fighterTapPursuitRatioBonus > 0) {
+      treasureEffectSummary.push(
+        `闘士追撃倍率 +${formatPercent(fighterTapPursuitRatioBonus, 0)}%`,
+      );
+    }
     const treasureRows = ownedTreasures
       .map((treasure) => {
         const effectLines = [];
@@ -674,6 +692,16 @@
             `合計ボスダメージ +${formatPercent(treasure.totalBossDamagePercent, 0)}%`,
           );
         }
+        if (treasure.totalThiefTreasureRewardBonusCount) {
+          effectLines.push(
+            `合計盗賊秘宝 +${formatNumber(treasure.totalThiefTreasureRewardBonusCount)}個`,
+          );
+        }
+        if (treasure.totalFighterTapPursuitRatioBonus) {
+          effectLines.push(
+            `合計闘士追撃倍率 +${formatPercent(treasure.totalFighterTapPursuitRatioBonus, 0)}%`,
+          );
+        }
         return `<div class="row-card"><div class="row-top"><div><div class="item-name">${treasure.name} x${formatNumber(treasure.count)}</div><div class="small">${treasure.description}${effectLines.length ? ` / ${effectLines.join(" / ")}` : ""}</div></div></div></div>`;
       })
       .join("");
@@ -700,8 +728,10 @@
     const critChance = window.GameBattle.calcCritChance();
     const critMultiplier = window.GameBattle.calcCritMultiplier();
     const superCritChance = window.GameBattle.calcSuperCritChance();
+    const multiStrikeChance = window.GameBattle.getMultiStrikeChance();
     const goldGainPercent = window.GameBattle.getGoldGainPercent();
     const tapAllyAttackChance = window.GameBattle.getTapAllyAttackChance();
+    const allyRallyChance = window.GameBattle.getAllyRallyChance();
     const bossDamagePercent = window.GameBattle.getBossDamagePercent();
     const normalEnemyDamagePercent =
       window.GameBattle.getNormalEnemyDamagePercent();
@@ -726,6 +756,10 @@
     const treasureAllyAttackIntervalReductionSeconds =
       window.GameRebirth?.getAllyAttackIntervalReductionSeconds
         ? window.GameRebirth.getAllyAttackIntervalReductionSeconds()
+        : 0;
+    const treasureFighterTapPursuitRatioBonus =
+      window.GameRebirth?.getFighterTapPursuitRatioBonus
+        ? window.GameRebirth.getFighterTapPursuitRatioBonus()
         : 0;
     const equipmentAllyAttackIntervalReductionSeconds =
       window.GameItems.getEquippedOptionTotal(
@@ -755,6 +789,9 @@
     const treasureFloorSkipChance = window.GameRebirth?.getFloorSkipChance
       ? window.GameRebirth.getFloorSkipChance()
       : 0;
+    const equipmentFloorSkipChance =
+      window.GameItems.getEquippedOptionTotal("floorSkipChance");
+    const floorSkipChance = window.GameBattle.getFloorSkipChance();
     const treasureNextRebirthExtraTreasureCount =
       window.GameRebirth?.getNextRebirthExtraTreasureCount
         ? window.GameRebirth.getNextRebirthExtraTreasureCount()
@@ -802,6 +839,9 @@
     if (superCritChance > 0) {
       playerLines.push(`超会心率: ${formatPercent(superCritChance, 1)}%`);
     }
+    if (multiStrikeChance > 0) {
+      playerLines.push(`連撃率: ${formatPercent(multiStrikeChance, 1)}%`);
+    }
     if (goldGainPercent > 0) {
       playerLines.push(`ゴールド倍率: +${formatPercent(goldGainPercent, 0)}%`);
     }
@@ -842,6 +882,14 @@
     if (tapAllyAttackChance > 0) {
       allyLines.push(
         `タップ時仲間追撃率: ${formatPercent(tapAllyAttackChance, 1)}%`,
+      );
+    }
+    if (allyRallyChance > 0) {
+      allyLines.push(`仲間号令率: ${formatPercent(allyRallyChance, 1)}%`);
+    }
+    if (treasureFighterTapPursuitRatioBonus > 0) {
+      allyLines.push(
+        `闘士追撃倍率: +${formatPercent(treasureFighterTapPursuitRatioBonus, 0)}%`,
       );
     }
     const equipmentLines = [];
@@ -891,9 +939,14 @@
         `高レア秘宝率: +${formatPercent(treasureRarityBonusPercent, 0)}%`,
       );
     }
-    if (treasureFloorSkipChance > 0) {
+    if (floorSkipChance > 0) {
       collectionLines.push(
-        `次階層スキップ率: ${formatPercent(treasureFloorSkipChance, 0)}%`,
+        `次階層スキップ率: ${formatPercent(floorSkipChance, 0)}%`,
+      );
+    }
+    if (equipmentFloorSkipChance > 0 && treasureFloorSkipChance > 0) {
+      collectionLines.push(
+        `装備探索加速: +${formatPercent(equipmentFloorSkipChance, 0)}%`,
       );
     }
     if (treasureNextRebirthExtraTreasureCount > 0) {

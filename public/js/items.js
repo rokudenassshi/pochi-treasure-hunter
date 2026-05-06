@@ -179,6 +179,7 @@
     item.critBonus = 0;
     item.critDamageBonus = 0;
     item.superCritChance = 0;
+    item.multiStrikeChance = 0;
     item.goldGainPercent = 0;
     item.itemDropRatePercent = 0;
     item.bossDamagePercent = 0;
@@ -186,7 +187,9 @@
     item.extraTreasureChance = 0;
     item.treasureRarityBonusPercent = 0;
     item.allyAttackIntervalReductionSeconds = 0;
+    item.allyRallyChance = 0;
     item.bossTimeBonusSeconds = 0;
+    item.floorSkipChance = 0;
 
     for (const option of options) {
       item[option.key] = (item[option.key] || 0) + option.value;

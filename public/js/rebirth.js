@@ -171,6 +171,8 @@
     let bossTreasureRewardCount = 0;
     let bossTreasureRewardFloorOffset = 0;
     let bossDamagePercent = 0;
+    let thiefTreasureRewardBonusCount = 0;
+    let fighterTapPursuitRatioBonus = 0;
 
     for (const treasure of treasureDefinitions) {
       const count = Math.max(0, Number(treasures[treasure.id]) || 0);
@@ -214,6 +216,10 @@
         count * (Number(treasure.bossTreasureRewardFloorOffset) || 0);
       const totalBossDamagePercent =
         count * (Number(treasure.bossDamagePercent) || 0);
+      const totalThiefTreasureRewardBonusCount =
+        count * (Number(treasure.thiefTreasureRewardBonusCount) || 0);
+      const totalFighterTapPursuitRatioBonus =
+        count * (Number(treasure.fighterTapPursuitRatioBonus) || 0);
       const entry = {
         ...treasure,
         count,
@@ -236,6 +242,8 @@
         totalBossTreasureRewardCount,
         totalBossTreasureRewardFloorOffset,
         totalBossDamagePercent,
+        totalThiefTreasureRewardBonusCount,
+        totalFighterTapPursuitRatioBonus,
       };
 
       entries.push(entry);
@@ -262,6 +270,8 @@
       bossTreasureRewardCount += totalBossTreasureRewardCount;
       bossTreasureRewardFloorOffset += totalBossTreasureRewardFloorOffset;
       bossDamagePercent += totalBossDamagePercent;
+      thiefTreasureRewardBonusCount += totalThiefTreasureRewardBonusCount;
+      fighterTapPursuitRatioBonus += totalFighterTapPursuitRatioBonus;
     }
 
     treasureSummaryCache = {
@@ -286,6 +296,8 @@
       bossTreasureRewardCount,
       bossTreasureRewardFloorOffset,
       bossDamagePercent,
+      thiefTreasureRewardBonusCount,
+      fighterTapPursuitRatioBonus,
     };
     return treasureSummaryCache;
   }
@@ -404,6 +416,17 @@
 
   function getBossDamagePercent() {
     return getTreasureSummary().bossDamagePercent;
+  }
+
+  function getThiefTreasureRewardBonusCount() {
+    return Math.max(
+      0,
+      Math.floor(getTreasureSummary().thiefTreasureRewardBonusCount),
+    );
+  }
+
+  function getFighterTapPursuitRatioBonus() {
+    return Math.max(0, getTreasureSummary().fighterTapPursuitRatioBonus);
   }
 
   function rollExtraTreasureRewardCount() {
@@ -777,6 +800,8 @@
     getBossTreasureRewardFloorOffset,
     getBossTreasureRewardFloor,
     getBossDamagePercent,
+    getThiefTreasureRewardBonusCount,
+    getFighterTapPursuitRatioBonus,
     getAttackBonus,
     grantBossDefeatTreasures,
     rebirth,

@@ -7,6 +7,14 @@
 
   function getBossHpMultiplier(floor) {
     const baseBonus = enemyScaling.bossHpBonus || 0;
+    const veryHighFloorStart = Math.max(
+      1,
+      Number(enemyScaling.veryHighFloorBossHpBonusStart) || 0,
+    );
+    if (floor >= veryHighFloorStart) {
+      return 1 + (enemyScaling.veryHighFloorBossHpBonus ?? baseBonus);
+    }
+
     const highFloorStart = Math.max(
       1,
       Number(enemyScaling.highFloorBossHpBonusStart) || 0,
@@ -20,6 +28,14 @@
 
   function getNormalHpGrowthRate(floor) {
     const baseRate = enemyScaling.normalHpGrowthRate || 0.037;
+    const veryHighFloorStart = Math.max(
+      1,
+      Number(enemyScaling.veryHighFloorNormalHpGrowthStart) || 0,
+    );
+    if (floor >= veryHighFloorStart) {
+      return enemyScaling.veryHighFloorNormalHpGrowthRate ?? baseRate;
+    }
+
     const highFloorStart = Math.max(
       1,
       Number(enemyScaling.highFloorNormalHpGrowthStart) || 0,

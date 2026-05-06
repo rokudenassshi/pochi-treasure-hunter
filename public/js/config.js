@@ -83,7 +83,8 @@
     {
       id: "merchant",
       name: "商人",
-      description: "攻撃頻度は遅く、攻撃力も低い。装備ドロップ率と獲得ゴールドが増える。",
+      description:
+        "攻撃頻度は遅く、攻撃力も低い。装備ドロップ率と獲得ゴールドが増える。",
       baseAtk: 1,
       attackIntervalSeconds: 8,
       itemDropRateBonus: 0.1,
@@ -378,6 +379,66 @@
       unlockFloor: 200,
     },
     {
+      id: "greatBattleAxe",
+      rewardRarity: "common",
+      name: "グレートアックス",
+      description: "戦士の攻撃力 +20",
+      allyJobAttackBonus: {
+        warrior: 20,
+      },
+      unlockFloor: 150,
+    },
+    {
+      id: "knightSword",
+      rewardRarity: "common",
+      name: "ナイトソード",
+      description: "剣士の攻撃力 +45",
+      allyJobAttackBonus: {
+        swordsman: 45,
+      },
+      unlockFloor: 150,
+    },
+    {
+      id: "rangerBow",
+      rewardRarity: "common",
+      name: "レンジャーボウ",
+      description: "狩人の攻撃力 +8",
+      allyJobAttackBonus: {
+        hunter: 8,
+      },
+      unlockFloor: 150,
+    },
+    {
+      id: "berserkerAxe",
+      rewardRarity: "uncommon",
+      name: "バーサーカーアックス",
+      description: "戦士の攻撃力 +60",
+      allyJobAttackBonus: {
+        warrior: 60,
+      },
+      unlockFloor: 300,
+    },
+    {
+      id: "samuraiBlade",
+      rewardRarity: "uncommon",
+      name: "サムライブレード",
+      description: "剣士の攻撃力 +120",
+      allyJobAttackBonus: {
+        swordsman: 120,
+      },
+      unlockFloor: 300,
+    },
+    {
+      id: "sniperBow",
+      rewardRarity: "uncommon",
+      name: "スナイパーボウ",
+      description: "狩人の攻撃力 +30",
+      allyJobAttackBonus: {
+        hunter: 30,
+      },
+      unlockFloor: 300,
+    },
+    {
       id: "critMask",
       rewardRarity: "common",
       name: "会心の仮面",
@@ -505,6 +566,36 @@
       unlockFloor: 500,
     },
     {
+      id: "guardianAxe",
+      rewardRarity: "rare",
+      name: "ガーディアンアックス",
+      description: "戦士の攻撃力 +80",
+      allyJobAttackBonus: {
+        warrior: 80,
+      },
+      unlockFloor: 500,
+    },
+    {
+      id: "moonlightKatana",
+      rewardRarity: "rare",
+      name: "ムーンライトカタナ",
+      description: "剣士の攻撃力 +180",
+      allyJobAttackBonus: {
+        swordsman: 180,
+      },
+      unlockFloor: 500,
+    },
+    {
+      id: "starfallBow",
+      rewardRarity: "rare",
+      name: "スターフォールボウ",
+      description: "狩人の攻撃力 +35",
+      allyJobAttackBonus: {
+        hunter: 35,
+      },
+      unlockFloor: 500,
+    },
+    {
       id: "goldenScale",
       rewardRarity: "rare",
       name: "黄金の秤",
@@ -535,9 +626,13 @@
     normalHpGrowthRate: 0.017,
     highFloorNormalHpGrowthStart: 200,
     highFloorNormalHpGrowthRate: 0.004,
+    veryHighFloorNormalHpGrowthStart: 500,
+    veryHighFloorNormalHpGrowthRate: 0.008,
     bossHpBonus: 0.2,
     highFloorBossHpBonusStart: 200,
     highFloorBossHpBonus: 0.08,
+    veryHighFloorBossHpBonusStart: 500,
+    veryHighFloorBossHpBonus: 0.12,
     goldBase: 5,
     goldPerFloor: 2.4,
     goldPerTier: 0.15,

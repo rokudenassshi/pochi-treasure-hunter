@@ -140,30 +140,13 @@
         template,
       ]),
     );
-    const legacyJobIds = [
-      "warrior",
-      "swordsman",
-      "hunter",
-      "merchant",
-      "fighter",
-    ];
-
-    function getLegacyJobId(allyId) {
-      const match = String(allyId || "").match(/^ally(\d+)$/);
-      if (!match) return "warrior";
-      const legacyIndex = Math.max(0, (Number(match[1]) || 1) - 1);
-      return legacyJobIds[legacyIndex % legacyJobIds.length] || "warrior";
-    }
 
     return allies
       .slice(0, window.GameAllies?.MAX_ALLIES || 5)
       .map((ally, index) => {
-        const jobId = templateMap.has(ally?.jobId || ally?.id)
-          ? ally?.jobId || ally?.id
-          : getLegacyJobId(ally?.id);
+        const jobId = ally?.jobId || ally?.id;
         const template = templateMap.get(jobId);
         if (!template) return null;
-        const legacyPartyLevel = Math.max(1, Number(state.partyLevel) || 1);
 
         return {
           ...template,
@@ -172,10 +155,7 @@
           uid: ally?.uid || `ally-${index + 1}`,
           jobId: template.id,
           name: String(template.name),
-          level: Math.max(
-            1,
-            Math.floor(Number(ally?.level) || legacyPartyLevel),
-          ),
+          level: Math.max(1, Math.floor(Number(ally?.level) || 1)),
           baseAtk: Math.max(0, Number(template.baseAtk) || 0),
           attackIntervalSeconds: Math.max(
             0,
@@ -278,7 +258,7 @@
 
   const ACTIVE_LOOP_INTERVAL_MS = 50;
   const HIDDEN_LOOP_INTERVAL_MS = 250;
-  const HOLD_ATTACK_INTERVAL_MS = 1000;
+  const HOLD_ATTACK_INTERVAL_MS = 500;
   let lastLoopFrameAt = 0;
 
   function equipItem(itemId) {

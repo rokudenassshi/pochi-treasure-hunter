@@ -39,6 +39,17 @@
     return getEquippedOptionTotal("allyAttackIntervalReductionSeconds");
   }
 
+  function getEquipmentAllyAttackIntervalMultiplier() {
+    const equippedItems = window.GameItems?.getEquippedItems
+      ? window.GameItems.getEquippedItems()
+      : [];
+    return equippedItems.reduce((multiplier, item) => {
+      const itemMultiplier = Number(item.allyAttackIntervalMultiplier) || 1;
+      if (itemMultiplier <= 0) return multiplier;
+      return multiplier * itemMultiplier;
+    }, 1);
+  }
+
   function getTreasureAllyJobAttackBonus(jobId) {
     return window.GameRebirth?.getAllyJobAttackBonus
       ? window.GameRebirth.getAllyJobAttackBonus(jobId)
@@ -119,7 +130,9 @@
       attackIntervalSeconds -
       getTreasureAllyAttackIntervalReductionSeconds() -
       getEquipmentAllyAttackIntervalReductionSeconds();
-    return Math.max(MIN_ALLY_ATTACK_INTERVAL_SECONDS, reducedInterval);
+    const multipliedInterval =
+      reducedInterval * getEquipmentAllyAttackIntervalMultiplier();
+    return Math.max(MIN_ALLY_ATTACK_INTERVAL_SECONDS, multipliedInterval);
   }
 
   function canAutoAttack(ally) {
@@ -302,6 +315,7 @@
     getAllyTapPursuitAttack,
     getAllyTreasureRewardBonusCount,
     getAllyAttackIntervalSeconds,
+    getEquipmentAllyAttackIntervalMultiplier,
     hireAlly,
     upgradeAlly,
     triggerTapAllyAttack,

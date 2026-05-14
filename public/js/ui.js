@@ -729,7 +729,9 @@
     const critMultiplier = window.GameBattle.calcCritMultiplier();
     const superCritChance = window.GameBattle.calcSuperCritChance();
     const multiStrikeChance = window.GameBattle.getMultiStrikeChance();
+    const tapExtraAttackCount = window.GameBattle.getTapExtraAttackCount();
     const goldGainPercent = window.GameBattle.getGoldGainPercent();
+    const enemyGoldTenfoldChance = window.GameBattle.getEnemyGoldTenfoldChance();
     const tapAllyAttackChance = window.GameBattle.getTapAllyAttackChance();
     const allyRallyChance = window.GameBattle.getAllyRallyChance();
     const bossDamagePercent = window.GameBattle.getBossDamagePercent();
@@ -765,6 +767,10 @@
       window.GameItems.getEquippedOptionTotal(
         "allyAttackIntervalReductionSeconds",
       );
+    const equipmentAllyAttackIntervalMultiplier =
+      window.GameAllies?.getEquipmentAllyAttackIntervalMultiplier
+        ? window.GameAllies.getEquipmentAllyAttackIntervalMultiplier()
+        : 1;
     const treasureGoldBonus = window.GameRebirth?.getGoldBonus
       ? window.GameRebirth.getGoldBonus()
       : 0;
@@ -842,8 +848,16 @@
     if (multiStrikeChance > 0) {
       playerLines.push(`連撃率: ${formatPercent(multiStrikeChance, 1)}%`);
     }
+    if (tapExtraAttackCount > 0) {
+      playerLines.push(`タップ追加攻撃: +${formatNumber(tapExtraAttackCount)}回`);
+    }
     if (goldGainPercent > 0) {
       playerLines.push(`ゴールド倍率: +${formatPercent(goldGainPercent, 0)}%`);
+    }
+    if (enemyGoldTenfoldChance > 0) {
+      playerLines.push(
+        `敵撃破ゴールド10倍: ${formatPercent(enemyGoldTenfoldChance, 1)}%`,
+      );
     }
     if (allyGoldGainPercent > 0) {
       playerLines.push(`商人ゴールド: +${formatPercent(allyGoldGainPercent, 0)}%`);
@@ -877,6 +891,11 @@
     if (equipmentAllyAttackIntervalReductionSeconds > 0) {
       allyLines.push(
         `装備仲間攻撃間隔: -${formatSeconds(equipmentAllyAttackIntervalReductionSeconds)}秒`,
+      );
+    }
+    if (equipmentAllyAttackIntervalMultiplier < 1) {
+      allyLines.push(
+        `装備仲間攻撃間隔: x${equipmentAllyAttackIntervalMultiplier.toFixed(2)}`,
       );
     }
     if (tapAllyAttackChance > 0) {

@@ -124,6 +124,13 @@
     return Math.min(1, getEquippedOptionTotal("multiStrikeChance"));
   }
 
+  function getTapExtraAttackCount() {
+    return Math.max(
+      0,
+      Math.floor(getEquippedOptionTotal("tapExtraAttackCount")),
+    );
+  }
+
   function getAllyRallyChance() {
     return Math.min(1, getEquippedOptionTotal("allyRallyChance"));
   }
@@ -142,6 +149,10 @@
         ? window.GameAllies.getGoldGainPercent()
         : 0)
     );
+  }
+
+  function getEnemyGoldTenfoldChance() {
+    return Math.min(1, getEquippedOptionTotal("enemyGoldTenfoldChance"));
   }
 
   function getTapAllyAttackChance() {
@@ -218,9 +229,11 @@
     const enemy = state.enemy;
     const clearedFloor = Math.max(1, Number(enemy?.floor) || state.floor);
     const goldGainPercent = getGoldGainPercent();
+    const isTenfoldGold = Math.random() < getEnemyGoldTenfoldChance();
     const isDoubleGold = Math.random() < getTreasureEnemyGoldDoubleChance();
+    const enemyGoldMultiplier = isTenfoldGold ? 10 : isDoubleGold ? 2 : 1;
     let enemyGold = Math.floor(
-      enemy.gold * (isDoubleGold ? 2 : 1) * (1 + goldGainPercent),
+      enemy.gold * enemyGoldMultiplier * (1 + goldGainPercent),
     );
     if (goldGainPercent > 0 && enemyGold <= enemy.gold) {
       enemyGold = enemy.gold + 1;
@@ -231,6 +244,9 @@
     }
 
     state.gold += reward;
+    if (isTenfoldGold) {
+      window.GameUI.addLog("収奪発動: 敵撃破ゴールドが10倍になった。");
+    }
     window.GameUI.addLog(`${window.GameUI.formatNumber(reward)}G 獲得。`);
     window.GameItems.tryDropItem();
 
@@ -285,7 +301,10 @@
 
   function onTapEnemy() {
     const tappedEnemy = state.enemy;
+    if (!tappedEnemy) return;
+
     const tapDamage = calcTapDamage();
+    const tapAttackCount = 1 + getTapExtraAttackCount();
     const buildTapHit = () => {
       const superCrit = Math.random() < calcSuperCritChance();
       const crit = !superCrit && Math.random() < calcCritChance();
@@ -301,26 +320,22 @@
       return { damage, crit, superCrit };
     };
 
-    const firstHit = buildTapHit();
-    damageEnemy(
-      firstHit.damage,
-      firstHit.crit || firstHit.superCrit,
-      "tap",
-      firstHit.superCrit,
-    );
+    const applyTapHit = () => {
+      const hit = buildTapHit();
+      damageEnemy(hit.damage, hit.crit || hit.superCrit, "tap", hit.superCrit);
+    };
+
+    for (let hitIndex = 0; hitIndex < tapAttackCount; hitIndex += 1) {
+      applyTapHit();
+      if (state.enemy !== tappedEnemy || state.enemy.hp <= 0) break;
+    }
 
     if (
       state.enemy === tappedEnemy &&
       state.enemy.hp > 0 &&
       Math.random() < getMultiStrikeChance()
     ) {
-      const extraHit = buildTapHit();
-      damageEnemy(
-        extraHit.damage,
-        extraHit.crit || extraHit.superCrit,
-        "tap",
-        extraHit.superCrit,
-      );
+      applyTapHit();
     }
 
     if (state.enemy === tappedEnemy && state.enemy.hp > 0) {
@@ -431,7 +446,9 @@
     calcCritMultiplier,
     calcSuperCritChance,
     getMultiStrikeChance,
+    getTapExtraAttackCount,
     getAllyRallyChance,
+    getEnemyGoldTenfoldChance,
     getTapAllyAttackChance,
     getFloorSkipChance,
     getBossDamagePercent,

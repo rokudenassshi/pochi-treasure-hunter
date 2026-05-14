@@ -5,10 +5,12 @@
     equipmentNameTiers = [],
     rarities,
     legendaryDropRate = 1 / 100000,
+    rareLegendaryTitleRate = 0.01,
     optionPool,
     optionDuplicateRate = 0.12,
     optionRollDistribution = {},
     legendaryTitles = [],
+    rareLegendaryTitles = [],
     equipmentMainStatRolls = {},
     synthesisMainStatStep = 0.001,
   } = window.GameConfig;
@@ -134,12 +136,9 @@
     return options;
   }
 
-  function buildLegendaryTitle() {
-    if (!legendaryTitles.length) return null;
-
-    const titleDef =
-      legendaryTitles[Math.floor(Math.random() * legendaryTitles.length)];
+  function buildLegendaryTitleFromDefinition(titleDef) {
     const digits = Number.isInteger(titleDef.digits) ? titleDef.digits : 3;
+    const hasFixedValue = Number.isFinite(Number(titleDef.value));
 
     return {
       key: titleDef.key,
@@ -147,15 +146,29 @@
       effectKey: titleDef.effectKey,
       label: titleDef.label,
       unit: titleDef.unit,
-      value: rollBiasedValue(
-        titleDef.min,
-        titleDef.max,
-        titleDef.bias ?? 3.4,
-        digits,
-        titleDef.upperTailStart ?? 0.55,
-        titleDef.upperTailPenalty ?? 4.2,
-      ),
+      value: hasFixedValue
+        ? Number(titleDef.value)
+        : rollBiasedValue(
+            titleDef.min,
+            titleDef.max,
+            titleDef.bias ?? 3.4,
+            digits,
+            titleDef.upperTailStart ?? 0.55,
+            titleDef.upperTailPenalty ?? 4.2,
+          ),
+      description: titleDef.description,
     };
+  }
+
+  function buildLegendaryTitle() {
+    const rareTitleRate = Math.max(0, Number(rareLegendaryTitleRate) || 0);
+    const useRareTitle =
+      rareLegendaryTitles.length > 0 && Math.random() < rareTitleRate;
+    const titlePool = useRareTitle ? rareLegendaryTitles : legendaryTitles;
+    if (!titlePool.length) return null;
+
+    const titleDef = titlePool[Math.floor(Math.random() * titlePool.length)];
+    return buildLegendaryTitleFromDefinition(titleDef);
   }
 
   function applyLegendaryTitleEffect(item) {
@@ -164,6 +177,12 @@
 
     const titleValue = Number(legendaryTitle.value) || 0;
     if (titleValue <= 0) return item;
+
+    if (legendaryTitle.unit === "multiplier") {
+      const currentValue = Number(item[legendaryTitle.effectKey]) || 1;
+      item[legendaryTitle.effectKey] = currentValue * titleValue;
+      return item;
+    }
 
     item[legendaryTitle.effectKey] =
       (item[legendaryTitle.effectKey] || 0) + titleValue;
@@ -190,6 +209,9 @@
     item.allyRallyChance = 0;
     item.bossTimeBonusSeconds = 0;
     item.floorSkipChance = 0;
+    item.allyAttackIntervalMultiplier = 1;
+    item.tapExtraAttackCount = 0;
+    item.enemyGoldTenfoldChance = 0;
 
     for (const option of options) {
       item[option.key] = (item[option.key] || 0) + option.value;
@@ -408,8 +430,14 @@
   }
 
   function formatOption(option) {
+    if (option.description) {
+      return option.description;
+    }
     if (option.unit === "%") {
       return `${option.label} +${(option.value * 100).toFixed(1)}%`;
+    }
+    if (option.unit === "multiplier") {
+      return `${option.label} x${option.value.toFixed(2)}`;
     }
     if (option.unit === "秒") {
       const value = Number.isInteger(option.value)

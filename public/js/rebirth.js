@@ -59,6 +59,15 @@
     }
 
     let mutated = false;
+    const definedTreasureIds = new Set(
+      treasureDefinitions.map((treasure) => treasure.id),
+    );
+    for (const treasureId of Object.keys(state.treasures)) {
+      if (!definedTreasureIds.has(treasureId)) {
+        delete state.treasures[treasureId];
+        mutated = true;
+      }
+    }
     for (const treasure of treasureDefinitions) {
       const normalizedCount = clampTreasureCount(
         treasure.id,
@@ -463,12 +472,16 @@
     return getPlayerAttackBonus();
   }
 
+  function isTreasureRewardAvailable(treasure, treasures = ensureTreasures()) {
+    return Boolean(treasure) && !isTreasureAtMax(treasure.id, treasures);
+  }
+
   function getEligibleTreasureDefinitionsForFloor(reachFloor) {
     const treasures = ensureTreasures();
     return treasureDefinitions.filter(
       (treasure) =>
         reachFloor >= (Number(treasure.unlockFloor) || 1) &&
-        !isTreasureAtMax(treasure.id, treasures),
+        isTreasureRewardAvailable(treasure, treasures),
     );
   }
 
@@ -518,7 +531,11 @@
   }
 
   function pickWeightedTreasure(treasures) {
+    const currentTreasures = ensureTreasures();
     const weightedTreasures = treasures
+      .filter((treasure) =>
+        isTreasureRewardAvailable(treasure, currentTreasures),
+      )
       .map((treasure) => ({
         treasure,
         weight: getTreasureRewardWeight(treasure),
@@ -547,15 +564,17 @@
 
     const rewards = new Map();
 
-    for (let index = 0; index < rewardCount; index += 1) {
+    let grantedRewardCount = 0;
+    while (grantedRewardCount < rewardCount) {
       const eligibleTreasures =
         getEligibleTreasureDefinitionsForFloor(rewardFloor);
       if (eligibleTreasures.length === 0) break;
       const treasure = pickWeightedTreasure(eligibleTreasures);
       if (!treasure) break;
       const addedAmount = addTreasure(treasure.id, 1);
-      if (addedAmount <= 0) continue;
+      if (addedAmount <= 0) break;
       rewards.set(treasure.id, (rewards.get(treasure.id) || 0) + addedAmount);
+      grantedRewardCount += addedAmount;
     }
 
     return treasureDefinitions

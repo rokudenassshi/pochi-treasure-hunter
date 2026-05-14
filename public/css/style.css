@@ -317,6 +317,33 @@ body {
   font-size: 13px;
 }
 .equip-settings-list { display: grid; gap: 8px; }
+.equip-settings-launch {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.equip-settings-open-button {
+  min-width: 112px;
+}
+.equip-settings-modal-content {
+  max-width: 460px;
+  max-height: min(90dvh, 560px);
+  overflow: auto;
+}
+.equip-settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.equip-settings-modal-header h3 {
+  margin: 0;
+}
+.equip-settings-close-button {
+  flex: 0 0 auto;
+}
 .equip-setting-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -325,6 +352,19 @@ body {
 }
 .equip-setting-card .item-name {
   margin: 0;
+}
+.equip-filter-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: end;
+  gap: 10px;
+}
+.equip-filter-title .item-name {
+  margin: 0;
+}
+.equip-setting-field {
+  display: grid;
+  gap: 4px;
 }
 .equip-setting-control {
   min-width: 112px;
@@ -339,8 +379,23 @@ body {
   font-size: 13px;
   text-align: right;
 }
+.equip-settings-modal-content .equip-setting-number {
+  padding: 8px 10px;
+  font-size: 13px;
+  margin-bottom: 0;
+  text-align: right;
+}
 .equip-setting-button {
   min-width: 88px;
+}
+@media (max-width: 520px) {
+  .equip-filter-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+  .equip-setting-control {
+    width: 100%;
+  }
 }
 .log { margin-top: 12px; max-height: 180px; overflow: auto; display: grid; gap: 6px; }
 .log div {

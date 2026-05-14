@@ -168,6 +168,48 @@
       .filter(Boolean);
   }
 
+  function normalizeAutoDiscardRarity(rarity) {
+    const rarityKeys = [
+      "none",
+      ...(window.GameConfig?.rarities || []).map((entry) => entry.key),
+    ];
+    return rarityKeys.includes(rarity) ? rarity : "none";
+  }
+
+  function normalizeItemSettings(settings) {
+    const rawSettings =
+      settings && typeof settings === "object" ? settings : {};
+    const rawFilters =
+      rawSettings.autoDiscardFilters &&
+      typeof rawSettings.autoDiscardFilters === "object"
+        ? rawSettings.autoDiscardFilters
+        : {};
+    const autoDiscardFilters = {};
+
+    for (const type of Object.keys(
+      window.GameConfig?.equipmentTypeDefinitions || {},
+    )) {
+      const rawFilter =
+        rawFilters[type] && typeof rawFilters[type] === "object"
+          ? rawFilters[type]
+          : {};
+      autoDiscardFilters[type] = {
+        rarity: normalizeAutoDiscardRarity(rawFilter.rarity),
+        attackPercent: Math.max(
+          0,
+          Number(rawFilter.attackPercent) || 0,
+        ),
+      };
+    }
+
+    return {
+      autoDiscardFilters,
+      lockedItemIds: Array.isArray(rawSettings.lockedItemIds)
+        ? rawSettings.lockedItemIds
+        : [],
+    };
+  }
+
   function loadGame() {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
@@ -201,19 +243,7 @@
       );
       refreshNextAllyId();
       state.partyLevel = Math.max(1, Number(parsed.partyLevel) || 1);
-      state.itemSettings = {
-        autoDiscardRarity: "none",
-        autoDiscardAttackPercent: 0,
-        lockedItemIds: [],
-        ...(parsed.itemSettings || {}),
-      };
-      state.itemSettings.autoDiscardAttackPercent = Math.max(
-        0,
-        Number(state.itemSettings.autoDiscardAttackPercent) || 0,
-      );
-      if (!Array.isArray(state.itemSettings.lockedItemIds)) {
-        state.itemSettings.lockedItemIds = [];
-      }
+      state.itemSettings = normalizeItemSettings(parsed.itemSettings);
       state.settings = {
         autoChallengeBoss: false,
         ...(parsed.settings || {}),
@@ -582,6 +612,9 @@
         "[data-discard]",
         "[data-unequip]",
         "[data-toggle-lock]",
+        "#openEquipSettingsBtn",
+        "#closeEquipSettingsBtn",
+        "#equipSettingsModal",
         "#bulkDiscardBtn",
       ].join(", ");
       const target = clicked.closest(actionSelector);
@@ -607,6 +640,21 @@
 
       if (target.dataset.equipInventoryTab) {
         ui.switchEquipInventoryTab(target.dataset.equipInventoryTab);
+        return;
+      }
+
+      if (target.id === "openEquipSettingsBtn") {
+        ui.openEquipSettings();
+        return;
+      }
+
+      if (target.id === "closeEquipSettingsBtn") {
+        ui.closeEquipSettings();
+        return;
+      }
+
+      if (target.id === "equipSettingsModal") {
+        if (clicked === target) ui.closeEquipSettings();
         return;
       }
 
@@ -691,18 +739,23 @@
     document.addEventListener("change", (event) => {
       const target = event.target;
       if (target instanceof HTMLSelectElement) {
-        if (target.id === "autoDiscardRaritySelect") {
-          state.itemSettings.autoDiscardRarity = target.value;
+        if (target.dataset.autoDiscardRarityType) {
+          const type = target.dataset.autoDiscardRarityType;
+          const filter = state.itemSettings.autoDiscardFilters?.[type];
+          if (filter) {
+            filter.rarity = target.value;
+          }
           saveGame();
         }
         return;
       }
       if (!(target instanceof HTMLInputElement)) return;
-      if (target.id === "autoDiscardAttackInput") {
-        state.itemSettings.autoDiscardAttackPercent = Math.max(
-          0,
-          Number(target.value) || 0,
-        );
+      if (target.dataset.autoDiscardAttackType) {
+        const type = target.dataset.autoDiscardAttackType;
+        const filter = state.itemSettings.autoDiscardFilters?.[type];
+        if (filter) {
+          filter.attackPercent = Math.max(0, Number(target.value) || 0);
+        }
         saveGame();
         return;
       }

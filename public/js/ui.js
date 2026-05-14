@@ -71,8 +71,40 @@
     return els.enemyArea;
   }
 
+  const COMPACT_NUMBER_THRESHOLD = 1_000_000;
+  const COMPACT_NUMBER_BASE = 1_000;
+
+  function formatCompactSuffix(index) {
+    let suffix = "";
+    let value = index;
+    do {
+      suffix = String.fromCharCode(97 + (value % 26)) + suffix;
+      value = Math.floor(value / 26) - 1;
+    } while (value >= 0);
+    return suffix;
+  }
+
+  function formatCompactNumber(absValue, exponent) {
+    const scaled = absValue / Math.pow(COMPACT_NUMBER_BASE, exponent);
+    const digits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 2;
+    const factor = Math.pow(10, digits);
+    const truncated = Math.floor(scaled * factor) / factor;
+    return `${truncated.toFixed(digits)}${formatCompactSuffix(exponent - 2)}`;
+  }
+
   function formatNumber(value) {
-    return Math.floor(value).toLocaleString("ja-JP");
+    const number = Math.floor(value);
+    if (!Number.isFinite(number)) return String(number);
+
+    const absValue = Math.abs(number);
+    if (absValue < COMPACT_NUMBER_THRESHOLD) {
+      return number.toLocaleString("ja-JP");
+    }
+
+    const exponent = Math.floor(
+      Math.log(absValue) / Math.log(COMPACT_NUMBER_BASE),
+    );
+    return `${number < 0 ? "-" : ""}${formatCompactNumber(absValue, exponent)}`;
   }
 
   function formatPercent(value, digits = 0) {
@@ -126,7 +158,10 @@
       els.challengeBossBtn,
       !enemy.isBoss && state.pendingBossFloor !== null ? "inline-flex" : "none",
     );
-    setDisplayIfChanged(els.escapeBossBtn, enemy.isBoss ? "inline-flex" : "none");
+    setDisplayIfChanged(
+      els.escapeBossBtn,
+      enemy.isBoss ? "inline-flex" : "none",
+    );
     els.hpFill.style.width = `${Math.max(0, enemy.hp / enemy.maxHp) * 100}%`;
     setTextIfChanged(
       els.hpText,
@@ -143,10 +178,10 @@
     setTextIfChanged(
       els.timerText,
       enemy.isBoss
-      ? `残り ${Math.ceil(state.bossTimeLeft)}秒`
-      : state.pendingBossFloor !== null
-        ? `ボス: ${state.pendingBossFloor}F`
-        : "--",
+        ? `残り ${Math.ceil(state.bossTimeLeft)}秒`
+        : state.pendingBossFloor !== null
+          ? `ボス: ${state.pendingBossFloor}F`
+          : "--",
     );
   }
 
@@ -159,18 +194,20 @@
     const extraTreasureChance = window.GameRebirth?.getExtraTreasureChance
       ? window.GameRebirth.getExtraTreasureChance()
       : 0;
-    const nextUnlockTreasureChance =
-      window.GameRebirth?.getNextUnlockTreasureChance
-        ? window.GameRebirth.getNextUnlockTreasureChance()
-        : 0;
-    const nextRebirthExtraTreasureCount =
-      window.GameRebirth?.getNextRebirthExtraTreasureCount
-        ? window.GameRebirth.getNextRebirthExtraTreasureCount()
-        : 0;
-    const rebirthStartingGoldBonus = window.GameRebirth?.getRebirthStartingGoldBonus
+    const nextUnlockTreasureChance = window.GameRebirth
+      ?.getNextUnlockTreasureChance
+      ? window.GameRebirth.getNextUnlockTreasureChance()
+      : 0;
+    const nextRebirthExtraTreasureCount = window.GameRebirth
+      ?.getNextRebirthExtraTreasureCount
+      ? window.GameRebirth.getNextRebirthExtraTreasureCount()
+      : 0;
+    const rebirthStartingGoldBonus = window.GameRebirth
+      ?.getRebirthStartingGoldBonus
       ? window.GameRebirth.getRebirthStartingGoldBonus()
       : 0;
-    const allyTreasureRewardBonus = window.GameAllies?.getTreasureRewardBonusCount
+    const allyTreasureRewardBonus = window.GameAllies
+      ?.getTreasureRewardBonusCount
       ? window.GameAllies.getTreasureRewardBonusCount()
       : 0;
     const reachFloor = window.GameRebirth?.getReachFloor
@@ -192,8 +229,7 @@
     els.maxTapBtn.disabled = state.gold < costs.tap;
     els.maxCritBtn.disabled = state.gold < costs.crit;
     els.maxCritDmgBtn.disabled = state.gold < costs.critDamage;
-    els.rebirthDescriptionText.textContent =
-      `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに秘宝 +1、100Fごとに追加 +1 / 今回 ${formatNumber(rewardCount)}個${allyTreasureRewardBonus > 0 ? ` / 盗賊 +${formatNumber(allyTreasureRewardBonus)}個` : ""}${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
+    els.rebirthDescriptionText.textContent = `現在撃破 ${formatNumber(reachFloor)}F / 50Fごとに秘宝 +1、100Fごとに追加 +1 / 今回 ${formatNumber(rewardCount)}個${allyTreasureRewardBonus > 0 ? ` / 盗賊 +${formatNumber(allyTreasureRewardBonus)}個` : ""}${nextRebirthExtraTreasureCount > 0 ? ` / 鍵確定 +${formatNumber(nextRebirthExtraTreasureCount)}個` : ""}${extraTreasureChance > 0 ? ` / 追加秘宝率 ${formatPercent(extraTreasureChance, 0)}%` : ""}${rebirthStartingGoldBonus > 0 ? ` / 開始ゴールド +${formatNumber(rebirthStartingGoldBonus)}` : ""}`;
     els.rebirthBtn.disabled = rewardCount <= 0;
   }
 
@@ -239,7 +275,9 @@
         lines.push(`秘宝 +${formatNumber(treasureRewardBonusCount)}個`);
       }
       if (ally.itemDropRateBonus > 0) {
-        lines.push(`装備ドロップ率 +${formatPercent(ally.itemDropRateBonus, 0)}%`);
+        lines.push(
+          `装備ドロップ率 +${formatPercent(ally.itemDropRateBonus, 0)}%`,
+        );
       }
       if (ally.goldGainPercent > 0) {
         lines.push(`獲得ゴールド +${formatPercent(ally.goldGainPercent, 0)}%`);
@@ -269,7 +307,8 @@
       .map((ally, index) => {
         const upgradeCost = getAllyUpgradeCost(ally);
         const upgradeAmount = getAllyUpgradeAttackAmount(ally);
-        const upgradeDisabled = upgradeCost === null || state.gold < upgradeCost;
+        const upgradeDisabled =
+          upgradeCost === null || state.gold < upgradeCost;
         const upgradeButton = canUpgradeAlly(ally)
           ? `<button class="btn primary" data-upgrade-ally="${ally.uid}" ${upgradeDisabled ? "disabled" : ""}>攻撃 +${formatNumber(upgradeAmount)} / ${formatNumber(upgradeCost)}G</button>`
           : '<button class="btn" disabled>強化不可</button>';
@@ -313,6 +352,85 @@
     }
 
     return `<button class="btn good" data-equip="${item.id}">装備</button><button class="btn ${lockBtnClass}" data-toggle-lock="${item.id}">${lockBtnText}</button><button class="btn warn" data-discard="${item.id}" ${isLocked ? "disabled" : ""}>捨てる</button>`;
+  }
+
+  function renderEquipSettingsContent() {
+    const rarityOptions = [
+      ["none", "なし"],
+      ["common", "コモン"],
+      ["uncommon", "アンコモン"],
+      ["rare", "レア"],
+      ["epic", "エピック"],
+      ["legendary", "レジェンダリー"],
+    ];
+    const filters = state.itemSettings.autoDiscardFilters || {};
+    const renderFilterSettings = (type) => {
+      const typeDef = equipmentTypeDefinitions[type];
+      const filter = filters[type] || {};
+      const rarity = filter.rarity || "none";
+      const attackPercent = Math.max(0, Number(filter.attackPercent) || 0);
+      return `
+        <div class="row-card equip-filter-card">
+          <div class="equip-filter-title">
+            <div class="item-name">${typeDef.label}</div>
+          </div>
+          <label class="equip-setting-field">
+            <span class="small">レアリティ</span>
+            <select class="btn equip-setting-control equip-setting-select" data-auto-discard-rarity-type="${type}">
+              ${rarityOptions
+                .map(
+                  ([optionRarity, label]) =>
+                    `<option value="${optionRarity}" ${rarity === optionRarity ? "selected" : ""}>${label}</option>`,
+                )
+                .join("")}
+            </select>
+          </label>
+          <label class="equip-setting-field">
+            <span class="small">${typeDef.mainStatLabel}</span>
+            <input
+              class="btn equip-setting-control equip-setting-number"
+              type="number"
+              min="0"
+              step="0.1"
+              inputmode="decimal"
+              value="${attackPercent}"
+              data-auto-discard-attack-type="${type}"
+            >
+          </label>
+        </div>
+      `;
+    };
+
+    return `
+      <div class="equip-settings-list">
+        ${renderFilterSettings("goggles")}
+        ${renderFilterSettings("compass")}
+      </div>
+    `;
+  }
+
+  function closeEquipSettings() {
+    document.getElementById("equipSettingsModal")?.remove();
+  }
+
+  function openEquipSettings() {
+    closeEquipSettings();
+    const modal = document.createElement("div");
+    modal.id = "equipSettingsModal";
+    modal.className = "modal equip-settings-modal";
+    modal.setAttribute("role", "dialog");
+    modal.setAttribute("aria-modal", "true");
+    modal.setAttribute("aria-labelledby", "equipSettingsModalTitle");
+    modal.innerHTML = `
+      <div class="modal-content equip-settings-modal-content">
+        <div class="equip-settings-modal-header">
+          <h3 id="equipSettingsModalTitle">装備フィルター</h3>
+          <button class="btn equip-settings-close-button" type="button" id="closeEquipSettingsBtn">閉じる</button>
+        </div>
+        ${renderEquipSettingsContent()}
+      </div>
+    `;
+    document.body.appendChild(modal);
   }
 
   function renderSlot(slotKey, item) {
@@ -418,45 +536,9 @@
     }`;
 
     els.itemSettingsSection.innerHTML = `
-      <div class="section-title">装備設定</div>
-      <div class="equip-settings-list">
-        <div class="row-card equip-setting-card">
-          <div class="item-name">自動破棄</div>
-          <select id="autoDiscardRaritySelect" class="btn equip-setting-control equip-setting-select">
-            ${[
-              ["none", "なし"],
-              ["common", "コモン"],
-              ["uncommon", "アンコモン"],
-              ["rare", "レア"],
-              ["epic", "エピック"],
-              ["legendary", "レジェンダリー"],
-            ]
-              .map(
-                ([rarity, label]) =>
-                  `<option value="${rarity}" ${state.itemSettings.autoDiscardRarity === rarity ? "selected" : ""}>${label}</option>`,
-                )
-              .join("")}
-          </select>
-        </div>
-        <div class="row-card equip-setting-card">
-          <div>
-            <div class="item-name">攻撃力で自動破棄</div>
-            <div class="small">主ステータスがこの値未満なら捨てる（0で無効）</div>
-          </div>
-          <input
-            id="autoDiscardAttackInput"
-            class="btn equip-setting-control equip-setting-number"
-            type="number"
-            min="0"
-            step="0.1"
-            inputmode="decimal"
-            value="${Number(state.itemSettings.autoDiscardAttackPercent) || 0}"
-          >
-        </div>
-        <div class="row-card equip-setting-card">
-          <div class="item-name">一括破棄</div>
-          <button class="btn warn equip-setting-control equip-setting-button" id="bulkDiscardBtn">実行</button>
-        </div>
+      <div class="equip-settings-launch">
+        <button class="btn warn equip-setting-button" type="button" id="bulkDiscardBtn">一括破棄</button>
+        <button class="btn equip-settings-open-button" type="button" id="openEquipSettingsBtn">装備フィルター</button>
       </div>
     `;
   }
@@ -483,9 +565,11 @@
     const floorSkipChance = window.GameRebirth.getFloorSkipChance();
     const nextRebirthExtraTreasureCount =
       window.GameRebirth.getNextRebirthExtraTreasureCount();
-    const rebirthStartingGoldBonus = window.GameRebirth.getRebirthStartingGoldBonus();
+    const rebirthStartingGoldBonus =
+      window.GameRebirth.getRebirthStartingGoldBonus();
     const enemyGoldDoubleChance = window.GameRebirth.getEnemyGoldDoubleChance();
-    const bossTreasureRewardCount = window.GameRebirth.getBossTreasureRewardCount();
+    const bossTreasureRewardCount =
+      window.GameRebirth.getBossTreasureRewardCount();
     const bossTreasureRewardFloorOffset =
       window.GameRebirth.getBossTreasureRewardFloorOffset();
     const bossDamagePercent = window.GameRebirth.getBossDamagePercent();
@@ -606,7 +690,9 @@
       .map((treasure) => {
         const effectLines = [];
         if (treasure.totalAttackBonus) {
-          effectLines.push(`合計攻撃力 +${formatNumber(treasure.totalAttackBonus)}`);
+          effectLines.push(
+            `合計攻撃力 +${formatNumber(treasure.totalAttackBonus)}`,
+          );
         }
         effectLines.push(
           ...formatAllyJobAttackBonusLines(
@@ -620,7 +706,9 @@
           );
         }
         if (treasure.totalGoldBonus) {
-          effectLines.push(`合計ゴールド +${formatNumber(treasure.totalGoldBonus)}`);
+          effectLines.push(
+            `合計ゴールド +${formatNumber(treasure.totalGoldBonus)}`,
+          );
         }
         if (treasure.totalPlayerUpgradeCostReduction) {
           effectLines.push(
@@ -731,7 +819,8 @@
     const multiStrikeChance = window.GameBattle.getMultiStrikeChance();
     const tapExtraAttackCount = window.GameBattle.getTapExtraAttackCount();
     const goldGainPercent = window.GameBattle.getGoldGainPercent();
-    const enemyGoldTenfoldChance = window.GameBattle.getEnemyGoldTenfoldChance();
+    const enemyGoldTenfoldChance =
+      window.GameBattle.getEnemyGoldTenfoldChance();
     const tapAllyAttackChance = window.GameBattle.getTapAllyAttackChance();
     const allyRallyChance = window.GameBattle.getAllyRallyChance();
     const bossDamagePercent = window.GameBattle.getBossDamagePercent();
@@ -747,7 +836,8 @@
     const allyItemDropRateBonus = window.GameAllies?.getItemDropRateBonus
       ? window.GameAllies.getItemDropRateBonus()
       : 0;
-    const allyTreasureRewardBonus = window.GameAllies?.getTreasureRewardBonusCount
+    const allyTreasureRewardBonus = window.GameAllies
+      ?.getTreasureRewardBonusCount
       ? window.GameAllies.getTreasureRewardBonusCount()
       : 0;
     const bossTimeLimit = window.GameEnemies.getBossTimeLimit();
@@ -755,61 +845,62 @@
     const treasureAttackBonus = window.GameRebirth?.getPlayerAttackBonus
       ? window.GameRebirth.getPlayerAttackBonus()
       : 0;
-    const treasureAllyAttackIntervalReductionSeconds =
-      window.GameRebirth?.getAllyAttackIntervalReductionSeconds
-        ? window.GameRebirth.getAllyAttackIntervalReductionSeconds()
-        : 0;
-    const treasureFighterTapPursuitRatioBonus =
-      window.GameRebirth?.getFighterTapPursuitRatioBonus
-        ? window.GameRebirth.getFighterTapPursuitRatioBonus()
-        : 0;
+    const treasureAllyAttackIntervalReductionSeconds = window.GameRebirth
+      ?.getAllyAttackIntervalReductionSeconds
+      ? window.GameRebirth.getAllyAttackIntervalReductionSeconds()
+      : 0;
+    const treasureFighterTapPursuitRatioBonus = window.GameRebirth
+      ?.getFighterTapPursuitRatioBonus
+      ? window.GameRebirth.getFighterTapPursuitRatioBonus()
+      : 0;
     const equipmentAllyAttackIntervalReductionSeconds =
       window.GameItems.getEquippedOptionTotal(
         "allyAttackIntervalReductionSeconds",
       );
-    const equipmentAllyAttackIntervalMultiplier =
-      window.GameAllies?.getEquipmentAllyAttackIntervalMultiplier
-        ? window.GameAllies.getEquipmentAllyAttackIntervalMultiplier()
-        : 1;
+    const equipmentAllyAttackIntervalMultiplier = window.GameAllies
+      ?.getEquipmentAllyAttackIntervalMultiplier
+      ? window.GameAllies.getEquipmentAllyAttackIntervalMultiplier()
+      : 1;
     const treasureGoldBonus = window.GameRebirth?.getGoldBonus
       ? window.GameRebirth.getGoldBonus()
       : 0;
-    const treasurePlayerUpgradeCostReduction =
-      window.GameRebirth?.getPlayerUpgradeCostReduction
-        ? window.GameRebirth.getPlayerUpgradeCostReduction()
-        : 0;
+    const treasurePlayerUpgradeCostReduction = window.GameRebirth
+      ?.getPlayerUpgradeCostReduction
+      ? window.GameRebirth.getPlayerUpgradeCostReduction()
+      : 0;
     const treasureItemDropRateBonus = window.GameRebirth?.getItemDropRateBonus
       ? window.GameRebirth.getItemDropRateBonus()
       : 0;
-    const treasureDroppedEquipmentAttackBonus =
-      window.GameRebirth?.getDroppedEquipmentAttackBonus
-        ? window.GameRebirth.getDroppedEquipmentAttackBonus()
-        : 0;
-    const treasureExtraTreasureChance = window.GameRebirth?.getExtraTreasureChance
+    const treasureDroppedEquipmentAttackBonus = window.GameRebirth
+      ?.getDroppedEquipmentAttackBonus
+      ? window.GameRebirth.getDroppedEquipmentAttackBonus()
+      : 0;
+    const treasureExtraTreasureChance = window.GameRebirth
+      ?.getExtraTreasureChance
       ? window.GameRebirth.getExtraTreasureChance()
       : 0;
-    const treasureRarityBonusPercent =
-      window.GameRebirth?.getTreasureRarityBonusPercent
-        ? window.GameRebirth.getTreasureRarityBonusPercent()
-        : 0;
+    const treasureRarityBonusPercent = window.GameRebirth
+      ?.getTreasureRarityBonusPercent
+      ? window.GameRebirth.getTreasureRarityBonusPercent()
+      : 0;
     const treasureFloorSkipChance = window.GameRebirth?.getFloorSkipChance
       ? window.GameRebirth.getFloorSkipChance()
       : 0;
     const equipmentFloorSkipChance =
       window.GameItems.getEquippedOptionTotal("floorSkipChance");
     const floorSkipChance = window.GameBattle.getFloorSkipChance();
-    const treasureNextRebirthExtraTreasureCount =
-      window.GameRebirth?.getNextRebirthExtraTreasureCount
-        ? window.GameRebirth.getNextRebirthExtraTreasureCount()
-        : 0;
-    const treasureRebirthStartingGoldBonus =
-      window.GameRebirth?.getRebirthStartingGoldBonus
-        ? window.GameRebirth.getRebirthStartingGoldBonus()
-        : 0;
-    const treasureBossTreasureRewardCount =
-      window.GameRebirth?.getBossTreasureRewardCount
-        ? window.GameRebirth.getBossTreasureRewardCount()
-        : 0;
+    const treasureNextRebirthExtraTreasureCount = window.GameRebirth
+      ?.getNextRebirthExtraTreasureCount
+      ? window.GameRebirth.getNextRebirthExtraTreasureCount()
+      : 0;
+    const treasureRebirthStartingGoldBonus = window.GameRebirth
+      ?.getRebirthStartingGoldBonus
+      ? window.GameRebirth.getRebirthStartingGoldBonus()
+      : 0;
+    const treasureBossTreasureRewardCount = window.GameRebirth
+      ?.getBossTreasureRewardCount
+      ? window.GameRebirth.getBossTreasureRewardCount()
+      : 0;
     const ownedTreasureCount = window.GameRebirth?.getOwnedTreasureEntries
       ? window.GameRebirth.getOwnedTreasureEntries().length
       : 0;
@@ -849,7 +940,9 @@
       playerLines.push(`連撃率: ${formatPercent(multiStrikeChance, 1)}%`);
     }
     if (tapExtraAttackCount > 0) {
-      playerLines.push(`タップ追加攻撃: +${formatNumber(tapExtraAttackCount)}回`);
+      playerLines.push(
+        `タップ追加攻撃: +${formatNumber(tapExtraAttackCount)}回`,
+      );
     }
     if (goldGainPercent > 0) {
       playerLines.push(`ゴールド倍率: +${formatPercent(goldGainPercent, 0)}%`);
@@ -860,7 +953,9 @@
       );
     }
     if (allyGoldGainPercent > 0) {
-      playerLines.push(`商人ゴールド: +${formatPercent(allyGoldGainPercent, 0)}%`);
+      playerLines.push(
+        `商人ゴールド: +${formatPercent(allyGoldGainPercent, 0)}%`,
+      );
     }
     if (treasureGoldBonus > 0) {
       playerLines.push(`秘宝ゴールド +${formatNumber(treasureGoldBonus)}`);
@@ -913,10 +1008,14 @@
     }
     const equipmentLines = [];
     if (itemDropBonus + treasureItemDropRateBonus + allyItemDropRateBonus > 0) {
-      equipmentLines.push(`装備ドロップ率: ${formatPercent(itemDropChance, 1)}%`);
+      equipmentLines.push(
+        `装備ドロップ率: ${formatPercent(itemDropChance, 1)}%`,
+      );
     }
     if (allyItemDropRateBonus > 0) {
-      equipmentLines.push(`商人ドロップ率: +${formatPercent(allyItemDropRateBonus, 0)}%`);
+      equipmentLines.push(
+        `商人ドロップ率: +${formatPercent(allyItemDropRateBonus, 0)}%`,
+      );
     }
     if (treasureDroppedEquipmentAttackBonus > 0) {
       equipmentLines.push(
@@ -979,7 +1078,9 @@
       );
     }
     if (allyTreasureRewardBonus > 0) {
-      collectionLines.push(`盗賊秘宝: +${formatNumber(allyTreasureRewardBonus)}個`);
+      collectionLines.push(
+        `盗賊秘宝: +${formatNumber(allyTreasureRewardBonus)}個`,
+      );
     }
 
     if (els.recordVersionText) {
@@ -1073,7 +1174,10 @@
           btn.dataset.recordTab === currentRecordTab,
         ),
       );
-    els.recordStatusPane.classList.toggle("active", currentRecordTab === "record");
+    els.recordStatusPane.classList.toggle(
+      "active",
+      currentRecordTab === "record",
+    );
     els.recordSettingsPane.classList.toggle(
       "active",
       currentRecordTab === "settings",
@@ -1086,7 +1190,9 @@
       const isActiveTab = btn.dataset.tab === currentTab;
       btn.classList.toggle("active", isActiveTab);
       btn.textContent =
-        isActiveTab && currentScreen === currentTab ? "閉じる" : btn.dataset.label;
+        isActiveTab && currentScreen === currentTab
+          ? "閉じる"
+          : btn.dataset.label;
     });
   }
 
@@ -1135,6 +1241,8 @@
     renderStatus,
     renderRecordSettings,
     render,
+    openEquipSettings,
+    closeEquipSettings,
     switchTab,
     switchItemTab,
     switchEquipInventoryTab,

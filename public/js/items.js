@@ -307,16 +307,15 @@
     return Math.max(0, Number(item[typeDef.mainStatKey]) || 0);
   }
 
-  function shouldAutoDiscardRarity(itemRarity) {
-    if (state.itemSettings.autoDiscardRarity === "none") {
+  function shouldAutoDiscardRarity(item) {
+    const filter = state.itemSettings.autoDiscardFilters?.[item?.type] || {};
+    if (filter.rarity === "none") {
       return false;
     }
 
     const rarityKeys = rarities.map((rarity) => rarity.key);
-    const autoDiscardThreshold = rarityKeys.indexOf(
-      state.itemSettings.autoDiscardRarity,
-    );
-    const itemRarityIndex = rarityKeys.indexOf(itemRarity);
+    const autoDiscardThreshold = rarityKeys.indexOf(filter.rarity);
+    const itemRarityIndex = rarityKeys.indexOf(item?.rarity);
 
     return (
       autoDiscardThreshold >= 0 &&
@@ -326,15 +325,15 @@
   }
 
   function shouldAutoDiscardAttack(item) {
+    const filter = state.itemSettings.autoDiscardFilters?.[item?.type] || {};
     const thresholdPercent =
-      Math.max(0, Number(state.itemSettings.autoDiscardAttackPercent) || 0) /
-      100;
+      Math.max(0, Number(filter.attackPercent) || 0) / 100;
     if (thresholdPercent <= 0) return false;
     return getItemMainStatPercent(item) < thresholdPercent;
   }
 
   function shouldAutoDiscardItem(item) {
-    return shouldAutoDiscardRarity(item.rarity) || shouldAutoDiscardAttack(item);
+    return shouldAutoDiscardRarity(item) || shouldAutoDiscardAttack(item);
   }
 
   function isItemLocked(itemId) {

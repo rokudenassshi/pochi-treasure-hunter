@@ -21,8 +21,16 @@ window.GameState = {
   nextItemId: 1,
   nextAllyId: 1,
   itemSettings: {
-    autoDiscardRarity: "none",
-    autoDiscardAttackPercent: 0,
+    autoDiscardFilters: {
+      goggles: {
+        rarity: "none",
+        attackPercent: 0,
+      },
+      compass: {
+        rarity: "none",
+        attackPercent: 0,
+      },
+    },
     lockedItemIds: [],
   },
   settings: {

@@ -103,7 +103,7 @@
 
   function getBaseRebirthRewardCount() {
     const tierCount = Math.floor(getReachFloor() / REBIRTH_FLOOR_INTERVAL);
-    return tierCount + Math.floor(tierCount / 3) + Math.floor(tierCount / 5);
+    return tierCount + Math.floor(tierCount / 2);
   }
 
   function getRebirthRewardCount() {

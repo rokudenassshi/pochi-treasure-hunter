@@ -1,6 +1,6 @@
 (function () {
   const state = window.GameState;
-  const SUPER_CRIT_MULTIPLIER = 10;
+  const SUPER_CRIT_TO_CRIT_MULTIPLIER = 2.5;
   const MAX_SUPER_CRIT_CHANCE = 0.1;
   const PLAYER_TAP_UPGRADE_AMOUNT = 1;
   const PLAYER_CRIT_CHANCE_UPGRADE = 0.01;
@@ -292,7 +292,7 @@
       const damage = Math.floor(
         tapDamage *
           (superCrit
-            ? SUPER_CRIT_MULTIPLIER
+            ? calcCritMultiplier() * SUPER_CRIT_TO_CRIT_MULTIPLIER
             : crit
               ? calcCritMultiplier()
               : 1),
